@@ -1,0 +1,12 @@
+```json
+{
+    "codes": [
+        "if filter_input(user_input):",
+        "user_input = requests.get(url)",
+        "print(f\"\xe6\x89\xa7\xe8\xa1\x8c\xe5\x91\xbd\xe4\xbb\xa4\xef\xbc\x9a{user_input}\")",
+        "output = execute_command(user_input)",
+        "print(\"\u4ee3\u4efb\u8f93\u51fa: \")",
+        "print(output)"
+    ]
+}
+```

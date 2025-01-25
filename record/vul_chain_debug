@@ -1,0 +1,119 @@
+2025-01-20 18:56:53,014 - INFO - 目标路径F:/juliet/datacon_model/vlun_demo\Command_injection检索完毕，共发现1个题目！！！
+2025-01-20 18:56:53,014 - INFO - 开始分析Command_injection类型题目: F:/juliet/datacon_model/vlun_demo\Command_injection\0
+2025-01-20 18:56:53,015 - INFO - F:/juliet/datacon_model/vlun_demo\Command_injection\0\1.py文件语法树构建成功！！！
+F:\juliet\datacon_model\main\libs\llmbase.py:100: LangChainDeprecationWarning: The method `BaseChatModel.__call__` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  output = self.llm(Message)
+2025-01-20 18:56:58,444 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 18:56:58,871 - INFO - 大模型返回：```json
+{
+    "function_name": "filter_input",
+    "call_sites": ["isalnum", "print"]
+}
+```
+2025-01-20 18:56:58,871 - INFO - 开始解析大模型返回结果
+2025-01-20 18:57:03,873 - INFO - 方法初始化完毕！！！！
+2025-01-20 18:57:09,321 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 18:57:09,858 - INFO - 大模型返回：```json
+{
+    "function_name": "trace_control_flow",
+    "call_sites": ["filter_input", "execute_command"]
+}
+```
+2025-01-20 18:57:09,858 - INFO - 开始解析大模型返回结果
+2025-01-20 18:57:14,859 - INFO - 方法初始化完毕！！！！
+2025-01-20 18:57:18,994 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:18,995 - INFO - Retrying request to /chat/completions in 0.476019 seconds
+2025-01-20 18:57:21,899 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:21,899 - INFO - Retrying request to /chat/completions in 0.950633 seconds
+2025-01-20 18:57:25,441 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:25,442 - INFO - 大模型返回：None
+2025-01-20 18:57:30,443 - ERROR - 大模型结果无法转化为json格式，第1次尝试重新请求大模型:
+2025-01-20 18:57:33,570 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:33,570 - INFO - Retrying request to /chat/completions in 0.483040 seconds
+2025-01-20 18:57:36,374 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:36,375 - INFO - Retrying request to /chat/completions in 0.954401 seconds
+2025-01-20 18:57:39,743 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:39,743 - INFO - 大模型返回：None
+2025-01-20 18:57:44,744 - ERROR - 大模型结果无法转化为json格式，第2次尝试重新请求大模型:
+2025-01-20 18:57:47,304 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:47,304 - INFO - Retrying request to /chat/completions in 0.488339 seconds
+2025-01-20 18:57:50,097 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:50,097 - INFO - Retrying request to /chat/completions in 0.889636 seconds
+2025-01-20 18:57:53,420 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:57:53,421 - INFO - 大模型返回：None
+2025-01-20 18:57:58,422 - ERROR - 大模型结果无法转化为json格式，第3次尝试重新请求大模型:
+2025-01-20 18:57:59,280 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 18:57:59,729 - INFO - 大模型返回：```json
+{
+    "function_name": "execute_command",
+    "call_sites": ["subprocess.run", "f"]
+}
+```
+2025-01-20 18:57:59,730 - INFO - 开始解析大模型返回结果
+2025-01-20 18:58:04,731 - INFO - 方法初始化完毕！！！！
+2025-01-20 18:58:04,731 - INFO - 方法构建成功!!!共构建 3 个方法
+2025-01-20 18:58:04,731 - INFO - 文件F:/juliet/datacon_model/vlun_demo\Command_injection\0\1.py共找到3个方法！！！
+2025-01-20 18:58:04,731 - INFO - 共解析到3个方法!!!
+2025-01-20 18:58:04,731 - INFO - 开始进行基于大模型的方法语义解析...
+2025-01-20 18:58:04,731 - INFO - 开始对filter_input进行针对Command_injection类型漏洞语义分析...
+2025-01-20 18:58:08,267 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 18:58:08,428 - INFO - 大模型返回：{
+    "input": false,
+    "command": false
+}
+2025-01-20 18:58:08,428 - INFO - 大模型结果解析成功！！！
+2025-01-20 18:58:08,428 - INFO - 开始对trace_control_flow进行针对Command_injection类型漏洞语义分析...
+2025-01-20 18:58:08,899 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:08,900 - INFO - Retrying request to /chat/completions in 0.489935 seconds
+2025-01-20 18:58:11,668 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:11,668 - INFO - Retrying request to /chat/completions in 0.946381 seconds
+2025-01-20 18:58:14,835 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:14,835 - INFO - 大模型返回：None
+2025-01-20 18:58:14,835 - INFO - 大模型结果解析失败，第1次尝试重新请求大模型:
+2025-01-20 18:58:21,985 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:21,986 - INFO - Retrying request to /chat/completions in 0.489686 seconds
+2025-01-20 18:58:25,675 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:25,675 - INFO - Retrying request to /chat/completions in 0.970708 seconds
+2025-01-20 18:58:28,803 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:28,803 - INFO - 大模型返回：None
+2025-01-20 18:58:28,804 - INFO - 大模型结果解析失败，第2次尝试重新请求大模型:
+2025-01-20 18:58:36,377 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:36,377 - INFO - Retrying request to /chat/completions in 0.460662 seconds
+2025-01-20 18:58:39,125 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:39,125 - INFO - Retrying request to /chat/completions in 0.837454 seconds
+2025-01-20 18:58:42,372 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:42,372 - INFO - 大模型返回：None
+2025-01-20 18:58:42,372 - INFO - 大模型结果解析失败，第3次尝试重新请求大模型:
+2025-01-20 18:58:49,503 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:49,503 - INFO - Retrying request to /chat/completions in 0.421741 seconds
+2025-01-20 18:58:52,127 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:52,127 - INFO - Retrying request to /chat/completions in 0.826309 seconds
+2025-01-20 18:58:55,371 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:58:55,371 - INFO - 大模型返回：None
+2025-01-20 18:58:55,371 - INFO - 大模型结果解析失败，第4次尝试重新请求大模型:
+2025-01-20 18:59:02,973 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 18:59:03,205 - INFO - 大模型返回：```json
+{
+    "input": true,
+    "command": true
+}
+```
+2025-01-20 18:59:03,205 - INFO - 大模型结果解析成功！！！
+2025-01-20 18:59:03,205 - INFO - 开始对execute_command进行针对Command_injection类型漏洞语义分析...
+2025-01-20 18:59:04,160 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 18:59:04,313 - INFO - 大模型返回：{
+    "input": false,
+    "command": true
+}
+2025-01-20 18:59:04,313 - INFO - 大模型结果解析成功！！！
+2025-01-20 18:59:36,019 - INFO - 开始调用链切片！！！
+2025-01-20 18:59:55,582 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-01-20 18:59:55,582 - INFO - Retrying request to /chat/completions in 0.375362 seconds
+2025-01-20 18:59:58,962 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 18:59:58,969 - INFO - 大模型返回：[
+  "user_input"
+]
+2025-01-20 19:00:37,362 - INFO - HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-20 19:00:37,368 - INFO - 大模型返回：[
+  "command"
+]

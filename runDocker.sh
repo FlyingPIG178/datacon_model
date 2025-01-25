@@ -1,0 +1,1 @@
+docker run --rm -it -e API_KEY=64e602c7c764146fd22f159099c8f08f -e API_BASE=https://poc.qianxin.com  -v /home/nstl/datacon/example/dataset_example:/vlun_demo -v /home/nstl/datacon/upload/results:/result --name datacon datacon
