@@ -58,21 +58,22 @@ class FunctionParsePrompt:
     #输入
     ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>；当前函数中被调用函数名字；子函数中污点参数，输入格式为json，例如：
     {
-     "function_snippet": parent.body,当前函数体
+      "function_snippet": parent.body,当前函数体
         "called_function_name": child.name,被调用函数名
         "tainted_parameters": ["param1", "param2", "param3"]  # 子函数污点参数列表
+        "child_function": child.body,被调用的子函数函数体  
     }
     #任务
     1. 分析函数流程
     2. 分析子函数污点参数tainted_parameters，并在function_snippet（当前函数的代码体）中找到和tainted_parameters相关的参数
-    3. 进行详细的推理过程。
+    3. 分析子函数污点参数tainted_parameters与child_function代码流程，按代码流程顺序提取出child_function中与污点参数有关的代码片。
     #输出结果
-    返回一个符合以下要求的 JSON 格式的数组，其中每个元素是一个字符串，表示当前函数代码体（function_snippet）中和tainted_parameters相关的参数名称：
-    [
-      "param1",
-      "param2",
-      "param3"
-    ]
+    请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
+    ```json
+    {
+        tainted_parameters:[参数1,参数2,参数3,......,参数n](当前函数代码体（function_snippet）中和tainted_parameters有关的参数名称)
+        codes:[代码片段1,代码片段2,代码片段3,......,代码片段n](子函数体child_function中与污点参数列表tainted_parameters有关的代码片段，按代码体执行顺序提取片段)
+    }```
     #限制
     1. 输出结果必须严格按照上述格式返回，不要返回除数组外的任何内容，确保格式标准化。
     2. 输出前后不要有多余的空行或注释，严格按照要求格式输出。
@@ -103,33 +104,36 @@ class FunctionParsePrompt:
     code_chain_travel_prompt="""
 #设定
 你是一个分析经验丰富的代码安全分析人员，能够对函数进行精准分析。
-#输入
-##函数调用链及其代码(Node1 -> Node2 -> Node3)，不同函数之间使用 Node1 -> Node2 表明Node1中存在调用Node2；当前调用链中污点函数（最可能被利用）名(sink_function_name)，以及该污点函数的可能被利用的参数，输入格式为json，例如：
-{
-    "VulnCode": "Node1 -> Node2 -> Node3",
-    "sink": {
-        "name": "sink_function_name",
-        "tainted_params": [
-            "args1",
-            "args2"
-        ]
-    }
-}
+ 
 #任务
 1. 分析调用流程，分析每个Node的调用点以及调用点的参数传递信息
 2. 分析sink函数污点参数与调用链流程，按代码流程顺序提取出与最终污点函数的污点参数有关利用链
 3. 进行详细的推理过程，判断利用链是否存在并是否可以利用，并根据危害程度打分（1-10分）
-#输出结果
+4. 根据分析的结果给出可能的利用方式
+#输入
+##利用链片段,以及触发点函数名(sink.name)和最终的污点参数
+{
+    "VulnCode": chain.mini_chain,
+            "sink": {
+                "name": sink.name,
+                "params": sink.tainted_params
+            }
+        }
+#输出结果(例子)
     请务必严格按照以下JSON格式案例返回分析结果，请确保生成格式正确的结果：
     ```json
     {
     "exists": true,
-    "score": 8,
-    "reason": "The vulnerability chain exists and is exploitable due to unfiltered tainted parameters reaching the sink function. No sanitization steps were detected."
+    "score": 1-10,
+    "reason": ""(出现漏洞的原因，语言描述),
+    "vuln_name":触发点函数名(输入的sink.name)
+    "vuln_node":触发点代码片段
     }
 ```
     #限制
     1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
+    2.除了要求的结果不要返回其他任何结果，"vuln_node"越精简越好
+    3.reason结果请用中文返回
     """
 
 
@@ -142,13 +146,13 @@ class FunctionAnalysisPrompt:
     ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>
     #任务
     1.分析该函数代码是否调用了读取文件的函数，如open()、ReadFile()等函数。
-    2.判断调用链中是否存判断该函数代码是否包含网络报文的处理，如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来部网络消息的处理。在对不受信任的外部数据的解析和处理（如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来自外部消息的请求处理。）
+    2.判断该函数代码是否包含输入操作（如从shell，网络中任何可以获取输入的操作）
     3. 让我们一步步地进行推理。
     #输出结果
     请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
     ```json
     {
-        input:bool(是否处理来自网络的消息和报文),
+        input:bool(是否有输入操作),
         file_read:bool(是否进行文件读取),
     }```
     #限制

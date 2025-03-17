@@ -1,0 +1,1 @@
+"```json\n{\n  \"exists\": true,\n  \"score\": 7,\n  \"reason\": \"代码中通过cfg->get_configvalue获取的'player'参数未经过任何过滤直接用于构造命令行参数，并且最终通过utils::run_interactively函数执行，存在命令注入的风险。\",\n  \"vuln_name\": \"usage\",\n  \"vuln_node\": \"cmdline.append(player);\"\n}\n```"

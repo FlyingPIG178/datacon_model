@@ -579,15 +579,15 @@ class VulChainGenerator:
     def generate_by_type(self, call_graph: nx.DiGraph, vuln_type: str) -> list[VulnChain]:
 
         try:
-            if vuln_type == "Arbitrary_file_access":
+            if vuln_type == "Arbitrary_file_access_CWE_22":
                 vuln_chain_list = self.gen_source_sink_type_vulchain("input", "file_read", call_graph)
-            elif vuln_type == "Authentication_bypass":
+            elif vuln_type == "Authentication_bypass_CWE_287":
                 vuln_chain_list = self.gen_source_sink_type_vulchain("input", "authentication", call_graph)
-            elif vuln_type == "Buffer_overflow":
+            elif vuln_type == "Buffer_overflow_CWE_119":
                 vuln_chain_list = self.gen_source_sink_type_vulchain("input", "memoryOP", call_graph)
-            elif vuln_type == "Command_injection":
+            elif vuln_type == "Command_injection_CWE_78":
                 vuln_chain_list = self.gen_source_sink_type_vulchain("input", "command", call_graph)
-            elif vuln_type == "Integer_overflow":
+            elif vuln_type == "Integer_overflow_CWE_190":
                 vuln_chain_list = self.gen_source_sink_type_vulchain("input", "integer", call_graph)
             elif vuln_type == "others":
                 vuln_chain_list = self.gen_source_sink_type_vulchain("input", "others", call_graph)
@@ -709,7 +709,7 @@ class VulChainGenerator:
                             count += 1  # 提示词还没写
                             if js_obj is None:
                                 logging.info(f"大模型结果解析sink函數危險參數失败，第{count}次尝试重新请求大模型:")
-                                time.sleep(5)  # 增加延迟时间，指数回退
+                                #time.sleep(5)  # 增加延迟时间，指数回退
                                 llm_output = self.llm.communicate(self.firstArgs_prompt, result)
                                 js_obj = self.resolve_output(llm_output)
                             else:

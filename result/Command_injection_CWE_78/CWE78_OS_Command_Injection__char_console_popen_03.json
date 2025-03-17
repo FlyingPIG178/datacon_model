@@ -1,0 +1,1 @@
+"```json\n{\n    \"exists\": true,\n    \"score\": 9,\n    \"reason\": \"代码中存在由用户输入拼接而成的字符串直接用于系统命令执行的情况，由于未对输入进行严格的过滤和限制，攻击者可以通过构造特定的输入来向系统执行恶意命令，实现任意命令注入，危害程度较高。\",\n    \"vuln_name\": \"CWE78_OS_Command_Injection__char_console_popen_03_bad\",\n    \"vuln_node\": \"pipe = POPEN(data, \\\"w\\\");\"\n}\n```"

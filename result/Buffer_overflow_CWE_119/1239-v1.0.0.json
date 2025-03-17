@@ -1,0 +1,1 @@
+"{\n  \"exists\": true,\n  \"score\": 10,\n  \"reason\": \"漏洞链存在且可被利用，原因是变量 'buf' 被未受限制地赋值，导致可能的缓冲区溢出。未检测到任何边界检查或清理步骤，可能的利用方式如下：通过控制 'loop_counter' 的值，可以覆盖 'buf' 数组以外的内存区域。\",\n  \"exploit\": \"攻击者可以构建恶意输入，设置 'loop_counter' 大于 10 的值，导致 'buf' 数组溢出，覆盖相邻的内存区域。例如：\\nloop_counter = 11;\\nbuf[loop_counter] = 'A';\\npayload: 'A'*11\"\n}"

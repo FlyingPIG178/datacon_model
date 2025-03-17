@@ -1,0 +1,1 @@
+"```json\n{\n  \"exists\": true,\n  \"score\": 9,\n  \"reason\": \"代码中存在未对用户输入进行过滤和验证，直接将用户输入拼接成系统命令执行，可能导致命令注入攻击。\",\n  \"vuln_name\": \"CWE78_OS_Command_Injection__char_console_popen_02_bad\",\n  \"vuln_node\": \"pipe = POPEN(data, \\\"w\\\");\"\n}\n```"

@@ -5,7 +5,7 @@ import time
 from typing import Tuple, Dict, List, Any
 
 from . import llmbase
-from .objects import Function, VulnChain, CodeChain
+from .objects import Function, VulnChain
 from .prompt import IntVulnCheckPrompt, FunctionAnalysisPrompt, BoolVulnCheckPrompt, FunctionParsePrompt
 from .config import Config
 
@@ -27,7 +27,7 @@ class FunctionParser:
             count += 1
             llm_output = self.llm.communicate(self.function_parse_prompt, function_body)
             json_result = self.resolve_output(llm_output)
-            time.sleep(5)
+            #time.sleep(5)
             if json_result is None:
                 logging.error(f"大模型结果无法转化为json格式，第{count}次尝试重新请求大模型:")
             else:
@@ -51,14 +51,21 @@ class FunctionParser:
             match = re.search(pattern, content, re.DOTALL)
             if match:
                 json_str = match.group(1).strip()
-                json_obj = json.loads(json_str)
+                json_obj = self.fix_json_escape(json_str)
+                json_obj = json.loads(json_obj)
             else:
+                content = self.fix_json_escape(content)
                 json_obj = json.loads(content)
             return json_obj
         except json.JSONDecodeError as e:
             logging.error("JSON格式解析错误:", e)
             return None
 
+    def fix_json_escape(self,json_str: str) -> str:
+        """
+        将 JSON 字符串中的所有 \' 改为 '。
+        """
+        return json_str.replace(r"\'", "'")
     # def split_code(self,code,length):
 
     # def parse_largefunc(self, code):
@@ -94,15 +101,15 @@ class FunctionAnalyser:
             # 这里可能遇到返回的json解析成功，但是key解析失败的情况，所以需要try一下，失败了重新跑
             try:
                 logging.info(f"开始对{function.name}进行针对{vuln_type}类型漏洞语义分析...")
-                if vuln_type == "Arbitrary_file_access":
+                if vuln_type == "Arbitrary_file_access_CWE_22":
                     json_result = self.type_analysis(self.Arbitrary_file_access_prompt, function)
-                elif vuln_type == "Authentication_bypass":
+                elif vuln_type == "Authentication_bypass_CWE_287":
                     json_result = self.type_analysis(self.Authentication_bypass_prompt, function)
-                elif vuln_type == "Buffer_overflow":
+                elif vuln_type == "Buffer_overflow_CWE_119":
                     json_result = self.type_analysis(self.Buffer_overflow_prompt, function)
-                elif vuln_type == "Command_injection":
+                elif vuln_type == "Command_injection_CWE_78":
                     json_result = self.type_analysis(self.Command_injection_prompt, function)
-                elif vuln_type == "Integer_overflow":
+                elif vuln_type == "Integer_overflow_CWE_190":
                     json_result = self.type_analysis(self.Integer_overflow_prompt, function)
                 elif vuln_type == "others":
                     json_result = self.type_analysis(self.others_prompt, function)
@@ -115,19 +122,19 @@ class FunctionAnalyser:
                     # 首先判断是否存在函数名和调用点，如果没有说明文件解析步骤不支持，则把大模型部分分析的调用点补进去
 
                     # 根据不同的漏洞类型，设置不同的属性
-                    if vuln_type == "Arbitrary_file_access":
+                    if vuln_type == "Arbitrary_file_access_CWE_22":
                         function.type["input"] = json_result["input"]
                         function.type["file_read"] = json_result["file_read"]
-                    elif vuln_type == "Authentication_bypass":
+                    elif vuln_type == "Authentication_bypass_CWE_287":
                         function.type["input"] = json_result["input"]
                         function.type["authentication"] = json_result["authentication"]
-                    elif vuln_type == "Buffer_overflow":
+                    elif vuln_type == "Buffer_overflow_CWE_119":
                         function.type["input"] = json_result["input"]
                         function.type["memoryOP"] = json_result["memoryOP"]
-                    elif vuln_type == "Command_injection":
+                    elif vuln_type == "Command_injection_CWE_78":
                         function.type["input"] = json_result["input"]
                         function.type["command"] = json_result["command"]
-                    elif vuln_type == "Integer_overflow":
+                    elif vuln_type == "Integer_overflow_CWE_190":
                         function.type["input"] = json_result["input"]
                         function.type["integer"] = json_result["integer"]
                     elif vuln_type == "others":
@@ -151,7 +158,7 @@ class FunctionAnalyser:
             count += 1
             if js_obj is None:
                 logging.info(f"大模型结果解析失败，第{count}次尝试重新请求大模型:")
-                time.sleep(5)  # 增加延迟时间，指数回退
+                #time.sleep(5)  # 增加延迟时间，指数回退
                 llm_output = self.llm.communicate(prompt, function.body)
                 js_obj = self.resolve_output(llm_output)
             else:
@@ -203,15 +210,15 @@ class VulnChecker:
     """
 
     def bool_check(self, vuln_chain: VulnChain, vuln_type: str) -> bool:
-        if vuln_type == "Arbitrary_file_access":
+        if vuln_type == "Arbitrary_file_access_CWE_22":
             json_result = self.type_check(self.Arbitrary_file_access_prompt, vuln_chain)
-        elif vuln_type == "Authentication_bypass":
+        elif vuln_type == "Authentication_bypass_CWE_287":
             json_result = self.type_check(self.Authentication_bypass_prompt, vuln_chain)
-        elif vuln_type == "Buffer_overflow":
+        elif vuln_type == "Buffer_overflow_CWE_119":
             json_result = self.type_check(self.Buffer_overflow_prompt, vuln_chain)
-        elif vuln_type == "Command_injection":
+        elif vuln_type == "Command_injection_CWE_78":
             json_result = self.type_check(self.Command_injection_prompt, vuln_chain)
-        elif vuln_type == "Integer_overflow":
+        elif vuln_type == "Integer_overflow_CWE_190":
             json_result = self.type_check(self.Integer_overflow_prompt, vuln_chain)
         elif vuln_type == "others":
             json_result = self.type_check(self.others_prompt, vuln_chain)
@@ -260,15 +267,15 @@ class VulnChecker:
     """
 
     def int_check(self, vuln_chain: VulnChain, vuln_type: str) -> int:
-        if vuln_type == "Arbitrary_file_access":
+        if vuln_type == "Arbitrary_file_access_CWE_22":
             json_result = self.type_check(IntVulnCheckPrompt.Arbitrary_file_access_prompt, vuln_chain)
-        elif vuln_type == "Authentication_bypass":
+        elif vuln_type == "Authentication_bypass_CWE_287":
             json_result = self.type_check(IntVulnCheckPrompt.Authentication_bypass_prompt, vuln_chain)
-        elif vuln_type == "Buffer_overflow":
+        elif vuln_type == "Buffer_overflow_CWE_119":
             json_result = self.type_check(IntVulnCheckPrompt.Buffer_overflow_prompt, vuln_chain)
-        elif vuln_type == "Command_injection":
+        elif vuln_type == "Command_injection_CWE_78":
             json_result = self.type_check(IntVulnCheckPrompt.Command_injection_prompt, vuln_chain)
-        elif vuln_type == "Integer_overflow":
+        elif vuln_type == "Integer_overflow_CWE_190":
             json_result = self.type_check(IntVulnCheckPrompt.Integer_overflow_prompt, vuln_chain)
         elif vuln_type == "others":
             json_result = self.type_check(IntVulnCheckPrompt.others_prompt, vuln_chain)
@@ -297,15 +304,15 @@ class VulnChecker:
     """
 
     def int_check_new(self, vuln_chain: VulnChain, vuln_type: str) -> int:
-        if vuln_type == "Arbitrary_file_access":
+        if vuln_type == "Arbitrary_file_access_CWE_22":
             json_result = self.type_check(IntVulnCheckPrompt.Arbitrary_file_access_prompt, vuln_chain)
-        elif vuln_type == "Authentication_bypass":
+        elif vuln_type == "Authentication_bypass_CWE_287":
             json_result = self.type_check(IntVulnCheckPrompt.Authentication_bypass_prompt, vuln_chain)
-        elif vuln_type == "Buffer_overflow":
+        elif vuln_type == "Buffer_overflow_CWE_119":
             json_result = self.type_check(IntVulnCheckPrompt.Buffer_overflow_prompt, vuln_chain)
-        elif vuln_type == "Command_injection":
+        elif vuln_type == "Command_injection_CWE_78":
             json_result = self.type_check(IntVulnCheckPrompt.Command_injection_prompt, vuln_chain)
-        elif vuln_type == "Integer_overflow":
+        elif vuln_type == "Integer_overflow_CWE_190":
             json_result = self.type_check(IntVulnCheckPrompt.Integer_overflow_prompt, vuln_chain)
         elif vuln_type == "others":
             json_result = self.type_check(IntVulnCheckPrompt.others_prompt, vuln_chain)
@@ -389,8 +396,8 @@ class ParamsAndBodyTravel:
             self.reverse_traverse(child, parent)  # 反向遍历：传递 child 和 parent
 
         # 正向遍历：从链头开始，依次遍历到链尾
-        for function in vuln_chain.vuln_chain_function:
-            self.forward_traverse(function)  # 正向遍历：逐个传递 function
+        if not vuln_chain.vuln_chain_function[0].node:
+            self.forward_traverse(vuln_chain.vuln_chain_function[0])  # 正向遍历：逐个传递 function
 
     def extract_tainted_code(self, function: Function):
         # 假设这个方法会返回包含污点参数的代码片段
@@ -402,7 +409,7 @@ class ParamsAndBodyTravel:
             count += 1
             llm_output = self.llm.communicate(self.body_travel_prompt, result)
             json_result = self.resolve_output(llm_output)
-            time.sleep(5)
+            #time.sleep(5)
             if json_result is None:
                 logging.error(f"大模型获取污点代码片段结果无法转化为json格式，第{count}次尝试重新请求大模型:")
             else:
@@ -432,11 +439,12 @@ class ParamsAndBodyTravel:
             if match:
                 # 提取匹配的 JSON 部分并转换为字典或列表
                 json_str = match.group(1).strip()
-
+                json_str = self.fix_json_escape(json_str)
                 json_obj = json.loads(json_str)
             else:
                 # 如果没有Markdown格式，则直接尝试解析纯JSON格式
-                json_obj = json.loads(content)
+                json_str = self.fix_json_escape(content)
+                json_obj = json.loads(json_str)
 
             # 确保返回的是一个符合格式要求的字典
             if isinstance(json_obj, dict):
@@ -450,6 +458,11 @@ class ParamsAndBodyTravel:
             logging.error("JSON格式解析错误: %s", e)
             return None
 
+    def fix_json_escape(self,json_str: str) -> str:
+        """
+        将 JSON 字符串中的所有 \' 改为 '。
+        """
+        return json_str.replace(r"\'", "'")
     def forward_traverse(self, function: Function):
         """
         正向遍历，提取与污点参数相关的代码片段
@@ -481,15 +494,21 @@ class ParamsAndBodyTravel:
                 while count <= Config.retry_times:
                     llm_output = self.llm.communicate(self.params_travel_prompt,
                                                       result)  # 大模型判断parent中和child的污点参数有关的参数parent_param
-                    js_obj = self.resolve_output2(llm_output)
+                    js_obj = self.resolve_output(llm_output)
                     count += 1  # 提示词还没写
                     if js_obj is None:
                         logging.info(f"大模型结果解析污点参数传递失败，第{count}次尝试重新请求大模型:")
-                        time.sleep(5)  # 增加延迟时间
+                        #time.sleep(5)  # 增加延迟时间
                         llm_output = self.llm.communicate(self.params_travel_prompt, result)
-                        js_obj = self.resolve_output2(llm_output)
+                        js_obj = self.resolve_output(llm_output)
                     else:
-                        parent.add_tainted_param(js_obj)#再看看
+                        parent.add_tainted_param(js_obj["tainted_parameters"])#再看看
+                        try:
+                            codes = js_obj["codes"]
+                            for code in codes:
+                                child.node += code + "\n"
+                        except Exception as e:
+                            logging.error(f"无法获取子函数片段，第{count}次尝试重新请求大模型:")
                         break
             except Exception as e:
                 logging.error(f"无法传递无污点参数，第{count}次尝试重新请求大模型:")
@@ -535,7 +554,8 @@ class ParamsAndBodyTravel:
             result = {
                 "function_snippet": parent.body,
                 "called_function_name": child.name,
-                "tainted_parameters": child.tainted_params
+                "tainted_parameters": child.tainted_params,
+                "child_function": child.body
             }
         else:
             result = {
@@ -563,11 +583,26 @@ class CodeChainTravel:
             "VulnCode": chain.mini_chain,
             "sink": {
                 "name": sink.name,
-                "call_site_list": sink.tainted_params
+                "params": sink.tainted_params
             }
         }
         return json.dumps(vuln_entry, indent=4, ensure_ascii=False)
 
+
     def analysis_chain(self, input: str):  # 可以用json不
-        llm_output = self.llm.communicate(self.CodeChainTravelPrompt, input)
-        return llm_output
+        try:
+            count = 0
+            llm_output = self.llm.communicate(self.CodeChainTravelPrompt, input)
+
+            while count <= Config.retry_times:
+                count += 1
+                if llm_output is None:
+                    logging.info(f"大模型结果解析最终结果失败，第{count}次尝试重新请求大模型:")
+                    #time.sleep(3)  # 增加延迟时间，指数回退
+                    llm_output = self.llm.communicate(self.CodeChainTravelPrompt, input)
+                else:
+                    return llm_output
+
+        except Exception as e:
+            logging.error(f"无法生成最终结果，第{count}次尝试重新请求大模型: {str(e)}")
+

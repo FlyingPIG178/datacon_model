@@ -8,18 +8,19 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 import libs.llmService
-from libs.objects import ChallengeFile, Function, VulnChain, CodeChain
+from libs.objects import ChallengeFile, Function, VulnChain
 from libs.utils import FileParser, Merger, VulChainGenerator
 
 """表示一个挑战，即一道题(如0,1,2),可能包含多个文件,存储在文件列表中，每一类漏洞文件夹下有多个题目漏洞"""
 
 
 class Challenge:
+
     def __init__(self, challenge_dir: str, vuln_type: str):
         logging.info(f"开始初始化题目：{challenge_dir}")
         self.vuln_type: str = vuln_type  # 自漏洞类型
         logging.debug(f"题目类型：{self.vuln_type}")
-        self.challenge_dir: list[str] = challenge_dir  # 自文件夹路径
+        self.challenge_dir: str = challenge_dir  # 自文件夹路径
         logging.debug(f"题目路径：{self.challenge_dir}")
 
         self.file_list: list[ChallengeFile] = self.get_file_list()  # self.file_list是一个列表每一个元素都是ChallengeFile类型
@@ -36,8 +37,7 @@ class Challenge:
         self.all_funtion_list: list[Function] = []  # 一个challenge下面所有的方法，这有问题吧？
         self.call_graph = nx.DiGraph()  # nx.DiGraph 是 NetworkX 提供的一个类，用于创建和操作有向图。
         self.vuln_chain_dict: dict[str, list[VulnChain]] = {}  # (sink函数名) 是字典中的 key，而 vuln_chain 是字典中的 value
-        "以最终漏洞函数名作为key,VulnChain作为valve"
-        self.code_chain_dict: dict[str, list[CodeChain]] = {}
+
         self.da_li_chu_qi_ji_mode = False
 
     def code_chain_generate(self):
@@ -46,13 +46,21 @@ class Challenge:
         """
         for function_name, vuln_chain_list in self.vuln_chain_dict.items():
             for vuln_chain in vuln_chain_list:  # 在这里处理每个 VulnChain 对象
-                #chain = CodeChain()#需要的是sink函数的名字，参数，
-                sink = vuln_chain.vuln_chain_function[-1]#这里取最后一个也就是sink点
+                # chain = CodeChain()#需要的是sink函数的名字，参数，
+                sink = vuln_chain.vuln_chain_function[-1]  # 这里取最后一个也就是sink点
                 self.CodeChainTravel.chain_generate(vuln_chain)
-                input_chain=self.CodeChainTravel.to_json(vuln_chain,sink)
-                output =self.CodeChainTravel.analysis_chain(input_chain)
-                with open(f"{vuln_chain.vuln_function_name}.json", "a", encoding="utf-8") as file:
+                input_chain = self.CodeChainTravel.to_json(vuln_chain, sink)
+                output = self.CodeChainTravel.analysis_chain(input_chain)
+                challenge_dir_name = os.path.basename(self.challenge_dir)
+                output_dir = os.path.join("F:/juliet/datacon_model/result", self.vuln_type,
+                                          f"{challenge_dir_name}.json")
+                # 确保目标文件夹存在
+                os.makedirs(os.path.dirname(output_dir), exist_ok=True)
+                # 将 JSON 数据追加到文件中
+                with open(output_dir, "a", encoding="utf-8") as file:
+                    # 写入 JSON 数据，确保格式正确
                     json.dump(output, file, indent=4, ensure_ascii=False)
+                    print("JSON 数据已写入指定路径")
                     print("JSON 数据已写入当前文件夹中的 result.json 文件")
 
     def travel_Params_And_Body(self):

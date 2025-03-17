@@ -26,11 +26,11 @@ else:
 def main():
 
     vulTypes = [
-        "Arbitrary_file_access",
-        "Authentication_bypass",
-        "Buffer_overflow",
-        "Command_injection",
-        "Integer_overflow",
+        "Arbitrary_file_access_CWE_22",
+        "Authentication_bypass_CWE_287",
+        "Buffer_overflow_CWE_119",
+        "Command_injection_CWE_78",
+        "Integer_overflow_CWE_190",
         "others"
     ]
     for vulType in vulTypes:
@@ -57,10 +57,10 @@ def run_single_challenge(challenge: Challenge):
     求解单个题目
     """
     try:
-        if (len(challenge.file_list) > 5):
-            logging.error(f"该挑战文件总数量为:{len(challenge.file_list)},文件数量过大！开启大力出奇迹模式！")
-            challenge.da_li_chu_qi_ji()
-            return
+        #f (len(challenge.file_list) > 5):
+            #logging.error(f"该挑战文件总数量为:{len(challenge.file_list)},文件数量过大！开启大力出奇迹模式！")
+            #challenge.da_li_chu_qi_ji()
+            #return
         # 进行文件解析，初始化方法列表，只提取方法体，方法名和调用点空起来，全部交给大模型判断
         challenge.parse_files()
         # 基于大模型的方法语义分析，获取Object::Function信息，type
@@ -94,7 +94,7 @@ def get_challenges(root_path, vuln_type) -> list[Challenge]:
     for root, dirs, files in os.walk(dir_path):  # root：当前遍历的目录路径，dirs：当前目录中的子目录列表。files：当前目录中的文件列表。
         for dir in dirs:
             if root == dir_path:  # 只处理主目录下的（dir_path）
-                challenge_path = os.path.join(root, dir)  # /vlun_demo/Arbitrary_file_access 文件夹下的六类漏洞文件夹的路径
+                challenge_path = os.path.join(root, dir)  # /vlun_demo/Arbitrary_file_access_CWE_22 文件夹下的六类漏洞文件夹的路径
                 challenge = Challenge(challenge_path, vuln_type)
                 challenges.append(challenge)
     logging.info(f'目标路径{dir_path}检索完毕，共发现{len(challenges)}个题目！！！')

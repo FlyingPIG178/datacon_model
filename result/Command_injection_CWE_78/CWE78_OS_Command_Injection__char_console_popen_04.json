@@ -1,0 +1,1 @@
+"```json\n{\n  \"exists\": true,\n  \"score\": 10,\n  \"reason\": \"代码中存在来自控制台的数据输入，未经任何处理直接用于系统命令执行，存在命令注入漏洞\",\n  \"vuln_name\": \"CWE78_OS_Command_Injection__char_console_popen_04_bad\",\n  \"vuln_node\": \"if (fgets(data+dataLen, (int)(100-dataLen), stdin) != NULL)\\ndata[dataLen-1] = '\\\\\\\\0';\\ndata[dataLen] = '\\\\\\\\0';\\npipe = POPEN(data, \\\"w\\\");\"\n}\n```"
