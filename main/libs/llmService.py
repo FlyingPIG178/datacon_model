@@ -5,6 +5,8 @@ import time
 from typing import Tuple, Dict, List, Any
 
 from . import llmbase
+from .TaintAnalyzer import TaintAnalyzer
+from .extractor import TaintExtractor
 from .objects import Function, VulnChain
 from .prompt import IntVulnCheckPrompt, FunctionAnalysisPrompt, BoolVulnCheckPrompt, FunctionParsePrompt
 from .config import Config
@@ -20,14 +22,14 @@ class FunctionParser:
     通过大模型拿到方法的方法名和调用点,大模型返回可能为None,需要设置次数判断并重传
     """
 
-    def get_function_name_and_callsites(self, function_body) -> Tuple[str, list[str]]:
+    def get_function_name_and_callsites(self, function_body) -> Tuple[str, list[str], list[str]]:
         count = 0
         # 如果json是None，则说明无法正确解析，重新和大模型沟通,上线次数写到了config里面
         while count <= Config.retry_times:
             count += 1
             llm_output = self.llm.communicate(self.function_parse_prompt, function_body)
             json_result = self.resolve_output(llm_output)
-            #time.sleep(5)
+            # time.sleep(5)
             if json_result is None:
                 logging.error(f"大模型结果无法转化为json格式，第{count}次尝试重新请求大模型:")
             else:
@@ -35,7 +37,8 @@ class FunctionParser:
                 try:
                     function_name = json_result["function_name"]
                     call_sites = json_result["call_sites"]
-                    return function_name, call_sites
+                    param_list = json_result["param_list"]
+                    return function_name, call_sites, param_list
                 except Exception as e:
                     logging.error(f"无法解析function_name和call_sites，第{count}次尝试重新请求大模型:")
                 break
@@ -61,7 +64,7 @@ class FunctionParser:
             logging.error("JSON格式解析错误:", e)
             return None
 
-    def fix_json_escape(self,json_str: str) -> str:
+    def fix_json_escape(self, json_str: str) -> str:
         """
         将 JSON 字符串中的所有 \' 改为 '。
         """
@@ -158,7 +161,7 @@ class FunctionAnalyser:
             count += 1
             if js_obj is None:
                 logging.info(f"大模型结果解析失败，第{count}次尝试重新请求大模型:")
-                #time.sleep(5)  # 增加延迟时间，指数回退
+                # time.sleep(5)  # 增加延迟时间，指数回退
                 llm_output = self.llm.communicate(prompt, function.body)
                 js_obj = self.resolve_output(llm_output)
             else:
@@ -376,11 +379,9 @@ class SummaryExtractor:
 
 
 class ParamsAndBodyTravel:
-    def __init__(self):
-        # todo  完成提示词
-        self.llm = llmbase.LLM()
-        self.params_travel_prompt = FunctionParsePrompt.params_travel_prompt  # 还没添加
-        self.body_travel_prompt = FunctionParsePrompt.body_travel_prompt  # 还没添加
+    def __init__(self, functions):
+        self.all_funtion_list = {func.name: func for func in functions}
+        self.processed_functions = set()  # 全局集合，用于记录已处理的函数
 
     def audit_vulnerability_chain(self, vuln_chain: [VulnChain]):
         """
@@ -395,84 +396,92 @@ class ParamsAndBodyTravel:
             parent = vuln_chain.vuln_chain_function[i - 1]
             self.reverse_traverse(child, parent)  # 反向遍历：传递 child 和 parent
 
-        # 正向遍历：从链头开始，依次遍历到链尾
-        if not vuln_chain.vuln_chain_function[0].node:
-            self.forward_traverse(vuln_chain.vuln_chain_function[0])  # 正向遍历：逐个传递 function
+        # 现在这里修改结合test内容
+        return self.analyze(vuln_chain.vuln_chain_function[0], vuln_chain)  # 正向遍历：逐个传递 function
 
-    def extract_tainted_code(self, function: Function):
-        # 假设这个方法会返回包含污点参数的代码片段
-        result = self.to_json(function, function, False)
-        # 这里使用调用大模型，传入提示词和代码体比如结果就是vuln_codes
-        """传入参数为：提示词，self.body,self.tainted_params"""
-        count = 0
-        while count <= Config.retry_times:
-            count += 1
-            llm_output = self.llm.communicate(self.body_travel_prompt, result)
-            json_result = self.resolve_output(llm_output)
-            #time.sleep(5)
-            if json_result is None:
-                logging.error(f"大模型获取污点代码片段结果无法转化为json格式，第{count}次尝试重新请求大模型:")
-            else:
-                # 返回结果成功了，也不一定能正常解析，所以这里要加一个try
-                try:
-                    codes = json_result["codes"]
-                    for code in codes:
-                        function.node += code + "\n"
-                    break
-                except Exception as e:
-                    logging.error(f"无法解析function_name和call_sites，第{count}次尝试重新请求大模型:")
-                break
+    def extract_taint_actions(self, function):
+        extractor = TaintExtractor(function)
+        extractor.extract()
 
-    def resolve_output(self,content: str):
-        # 解析大模型返回结果，有可能为None
-        if content is None:
-            return None
+        # 检查是否为 bytes 类型并转换为字符串
+        if isinstance(function.node, bytes):
+            function.node = function.node.decode('utf-8')
 
-        logging.debug("开始解析大模型返回结果")
+        if function.node:
+            return function.node.splitlines()
+        return []
 
-        # 正则模式：匹配可能存在的Markdown格式的JSON对象（大括号）
-        pattern = r"```json\s*({.*?})\s*```"  # 只匹配JSON对象（大括号）
+    def build_call_tree(self, function, vuln_chain):
+        # 判断是否已经处理过
+        if function.name in self.processed_functions:
+            print(f"⚠️ Detected duplicate function {function.name}, skipping.")
+            return None  # 不再返回任何信息
 
+        # 标记为已处理
+        self.processed_functions.add(function.name)
+        taint_actions = self.extract_taint_actions(function)
+
+        node = {
+            "function": function.name,
+            "taint_params": function.tainted_params,
+            "taint_actions": taint_actions,
+            "calls": []
+        }
+
+        # 使用vuln_chain_function_list来确定调用顺序
+        if vuln_chain and function.name in vuln_chain.vuln_chain_function_list:
+            current_index = vuln_chain.vuln_chain_function_list.index(function.name)
+            if current_index + 1 < len(vuln_chain.vuln_chain_function_list):
+                next_function_name = vuln_chain.vuln_chain_function_list[current_index + 1]
+                if next_function_name in self.all_funtion_list:
+                    child_function = self.all_funtion_list[next_function_name]
+                    child_node = self.build_call_tree(child_function, vuln_chain)
+                    if child_node is not None:
+                        node["calls"].append(child_node)
+
+        self.find_and_append_clean_functions(node, function, vuln_chain)
+        return node
+
+    def find_and_append_clean_functions(self, node, function, vuln_chain):
+        for action in node["taint_actions"]:
+            # 去掉正则匹配，直接获取调用的函数名
+            called_function_name = action.split('(')[0].strip()
+
+            # 检查函数是否存在且不在漏洞链中
+            if called_function_name in self.all_funtion_list and (
+                    not vuln_chain or called_function_name not in vuln_chain.vuln_chain_function_list):
+                clean_function = self.all_funtion_list[called_function_name]
+
+                # 直接使用函数参数列表进行污点检测
+                tainted_param_indices = [
+                    i for i, param in enumerate(clean_function.param_list)
+                    if param in function.tainted_params
+                ]
+
+                if not tainted_param_indices:
+                    continue  # 没有污点参数则跳过
+
+                print(
+                    f"✅ Detected function call with tainted parameters: {called_function_name}, Positions: {tainted_param_indices}")
+
+                # 标记对应位置的参数为污点参数
+                for i in tainted_param_indices:
+                    if i < len(clean_function.param_list):
+                        param_name = clean_function.param_list[i]
+                        print(f"⚠️ Marking {param_name} as tainted in function {called_function_name}.")
+                        clean_function.add_tainted_param(param_name)
+
+                # 构建调用树
+                clean_node = self.build_call_tree(clean_function, vuln_chain)
+                if clean_node is not None:
+                    node['calls'].insert(0, clean_node)
+
+    def analyze(self, entry_point, vuln_chain):
         try:
-            # 尝试匹配Markdown格式的JSON代码块
-            match = re.search(pattern, content, re.DOTALL)
-            if match:
-                # 提取匹配的 JSON 部分并转换为字典或列表
-                json_str = match.group(1).strip()
-                json_str = self.fix_json_escape(json_str)
-                json_obj = json.loads(json_str)
-            else:
-                # 如果没有Markdown格式，则直接尝试解析纯JSON格式
-                json_str = self.fix_json_escape(content)
-                json_obj = json.loads(json_str)
-
-            # 确保返回的是一个符合格式要求的字典
-            if isinstance(json_obj, dict):
-                return json_obj  # 返回解析后的字典
-            else:
-                logging.error("返回的不是一个有效的字典")
-                return None
-
-        except json.JSONDecodeError as e:
-            # 错误信息格式化
-            logging.error("JSON格式解析错误: %s", e)
+            return self.build_call_tree(entry_point, vuln_chain)
+        except RecursionError as e:
+            print(f"❗ Fatal RecursionError: {e}")
             return None
-
-    def fix_json_escape(self,json_str: str) -> str:
-        """
-        将 JSON 字符串中的所有 \' 改为 '。
-        """
-        return json_str.replace(r"\'", "'")
-    def forward_traverse(self, function: Function):
-        """
-        正向遍历，提取与污点参数相关的代码片段
-        实际是调用self. extract_tainted_code
-        将当前Fuction的污点参数数组和代码片段交给大模型提取相关代码片段
-        所得代码片段加入self.node
-        参数为当前函数体，当前函数污点参数，提示词
-        结果:为当前函数添加污点参数相关代码
-        """
-        self.extract_tainted_code(function)
 
     def reverse_traverse(self, child: Function, parent: Function):
         """
@@ -483,86 +492,39 @@ class ParamsAndBodyTravel:
         结果:为父节点添加五点参数列表
         现在直接把child和parent传进去，具体需要什么值具体调用
         """
-        if parent:
-            # 将当前子节点的污点参数传递给父节点
-            """
-            传入参数为child.tainted_params,parent
-            """
-            result = self.to_json(child, parent, True)
-            try:
-                count = 0
-                while count <= Config.retry_times:
-                    llm_output = self.llm.communicate(self.params_travel_prompt,
-                                                      result)  # 大模型判断parent中和child的污点参数有关的参数parent_param
-                    js_obj = self.resolve_output(llm_output)
-                    count += 1  # 提示词还没写
-                    if js_obj is None:
-                        logging.info(f"大模型结果解析污点参数传递失败，第{count}次尝试重新请求大模型:")
-                        #time.sleep(5)  # 增加延迟时间
-                        llm_output = self.llm.communicate(self.params_travel_prompt, result)
-                        js_obj = self.resolve_output(llm_output)
-                    else:
-                        parent.add_tainted_param(js_obj["tainted_parameters"])#再看看
-                        try:
-                            codes = js_obj["codes"]
-                            for code in codes:
-                                child.node += code + "\n"
-                        except Exception as e:
-                            logging.error(f"无法获取子函数片段，第{count}次尝试重新请求大模型:")
-                        break
-            except Exception as e:
-                logging.error(f"无法传递无污点参数，第{count}次尝试重新请求大模型:")
+        if not child.tainted_params or not child.param_list:
+            return
+
+        tainted_args = set()
+        try:
+            parent_body = parent.body.decode("utf-8").strip().splitlines()
+        except Exception as e:
+            print(f"解码失败: {e}")
+            return
+
+        # 正则匹配调用 child.name 的位置，并捕获参数
+        pattern = re.compile(rf"{re.escape(child.name)}\s*\((.*?)\)")
+
+        for line in parent_body:
+            match = pattern.search(line)
+            if not match:
+                continue
+
+            args = [arg.strip() for arg in match.group(1).split(",")]
+
+            # 根据参数位置匹配 child 的污点参数
+            for i, formal_param in enumerate(child.param_list):
+                if formal_param in child.tainted_params and i < len(args):
+                    real_arg = args[i]
+                    print(f"检测到污点参数传递: {formal_param} -> {real_arg}")
+                    tainted_args.add(real_arg)
+
+        if tainted_args:
+            parent.tainted_params.extend(list(tainted_args))
+            parent.tainted_params = list(set(parent.tainted_params))
+            print(f"更新后的污点参数: {parent.tainted_params}")
 
     # 定义函数：接受两个 Function 对象，生成 JSON
-    def resolve_output2(self, content: str):
-        # 解析大模型返回结果，有可能为None
-        if content is None:
-            return None
-
-        logging.debug("开始解析大模型返回结果")
-
-        # 正则模式：匹配可能存在的Markdown格式的JSON数组（方括号）
-        pattern = r"```json\s*(\[[\s\S]*?\])\s*```"  # 只匹配JSON数组（方括号）
-
-        try:
-            # 尝试匹配Markdown格式的JSON数组代码块
-            match = re.search(pattern, content, re.DOTALL)
-            if match:
-                # 提取匹配的 JSON 部分并转换为字典或列表
-                json_str = match.group(1).strip()
-                json_obj = json.loads(json_str)
-            else:
-                # 如果没有Markdown格式，则直接尝试解析纯JSON格式
-                json_obj = json.loads(content)
-
-            # 确保返回的是一个符合格式要求的列表（数组）
-            if isinstance(json_obj, list):
-                return json_obj  # 返回解析后的数组
-            else:
-                logging.error("返回的不是一个有效的数组")
-                return None
-
-        except json.JSONDecodeError as e:
-            logging.error("JSON格式解析错误:", e)
-            return None
-
-    def to_json(self, child: Function, parent: Function, switch: bool) -> dict[str, str | Any] | dict[str, str | Any]:
-        """
-        开关为true传递污点参数，开关为False提取和污点参数有关的代码
-        """
-        if switch:
-            result = {
-                "function_snippet": parent.body,
-                "called_function_name": child.name,
-                "tainted_parameters": child.tainted_params,
-                "child_function": child.body
-            }
-        else:
-            result = {
-                "function_snippet": parent.body,
-                "tainted_parameters": parent.tainted_params
-            }
-        return result
 
 
 class CodeChainTravel:
@@ -571,38 +533,74 @@ class CodeChainTravel:
         self.llm = llmbase.LLM()
         self.CodeChainTravelPrompt = FunctionParsePrompt.code_chain_travel_prompt  # 还没添加,将codechain交给大模型判断漏洞原因
 
-    def chain_generate(self, vulnChain: VulnChain):
-        """链条，sink信息"""
-        vulnChain.generate_mini_chain()
-
-    def to_json(self, chain: VulnChain, sink: Function):
-        """
-        json组成为chain的VulnCodes，sink的name和sink的参数列表
-        """
-        vuln_entry = {
-            "VulnCode": chain.mini_chain,
-            "sink": {
-                "name": sink.name,
-                "params": sink.tainted_params
-            }
-        }
-        return json.dumps(vuln_entry, indent=4, ensure_ascii=False)
-
-
-    def analysis_chain(self, input: str):  # 可以用json不
+    def resolve_output(self, content: str):
+        # 解析大模型返回结果，有可能为None
+        if content == None:
+            return None
+        logging.info("开始解析大模型返回结果")
+        pattern = r"```json\s*({.*?})\s*```"
+        # 如果匹配到了md格式的``，则正则匹配，没有的话就直接json.loads()解析
         try:
-            count = 0
-            llm_output = self.llm.communicate(self.CodeChainTravelPrompt, input)
+            match = re.search(pattern, content, re.DOTALL)
+            if match:
+                json_str = match.group(1).strip()
+                json_obj = self.fix_json_escape(json_str)
+                json_obj = json.loads(json_obj)
+            else:
+                content = self.fix_json_escape(content)
+                json_obj = json.loads(content)
+            return json_obj
+        except json.JSONDecodeError as e:
+            logging.error("JSON格式解析错误:", e)
+            return None
 
+    def fix_json_escape(self, json_str: str) -> str:
+        """
+        将 JSON 字符串中的所有 \' 改为 '。
+        """
+        return json_str.replace(r"\'", "'")
+
+    def generate_prompt(self, node_data, vuln_type):
+        """
+        根据漏洞链数据生成提示词
+        """
+        return self.CodeChainTravelPrompt.format(
+            node_data=json.dumps(node_data, indent=2),
+            vuln_type=vuln_type
+        )
+
+    def analysis_chain(self, node_data, vuln_type):
+        """
+        使用 LLM 分析漏洞链并返回结果，将分析结果附加到原始 JSON 数据
+        """
+        try:
+            prompt = self.generate_prompt(node_data, vuln_type)
+            count = 0
+            llm_output = self.llm.communicate(prompt, None)
+            llm_output = self.resolve_output(llm_output)
             while count <= Config.retry_times:
-                count += 1
                 if llm_output is None:
-                    logging.info(f"大模型结果解析最终结果失败，第{count}次尝试重新请求大模型:")
-                    #time.sleep(3)  # 增加延迟时间，指数回退
-                    llm_output = self.llm.communicate(self.CodeChainTravelPrompt, input)
+                    logging.info(f"大模型结果漏洞分析失败，第{count}次尝试重新请求大模型:")
+                    count=count+1
+                    # time.sleep(5)  # 增加延迟时间，指数回退
+                    llm_output = self.llm.communicate(prompt, None)
+                    llm_output = self.resolve_output(llm_output)
                 else:
-                    return llm_output
+                    print("大模型分析成功。")
+                    node_data["vulnerability_analysis"] = llm_output.get("vulnerability_analysis", {})
+                    return node_data
+                if llm_output is not None:
+                    print("大模型分析成功。")
+                    node_data["vulnerability_analysis"] = llm_output.get("vulnerability_analysis", {})
+                    return node_data
+
+                count += 1
+                logging.info(f"大模型结果解析失败，第 {count} 次重试...")
+                llm_output = self.llm.communicate(prompt)
+
+            logging.error("所有重试均失败，无法获取大模型结果。")
+            return node_data
 
         except Exception as e:
-            logging.error(f"无法生成最终结果，第{count}次尝试重新请求大模型: {str(e)}")
-
+            logging.error(f"LLM 分析时出现异常: {str(e)}")
+            return node_data

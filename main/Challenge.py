@@ -32,36 +32,39 @@ class Challenge:
         self.file_parser: FileParser = FileParser()
         self.vul_chain_generator: VulChainGenerator = VulChainGenerator()
         self.vul_checker: libs.llmService.VulnChecker = libs.llmService.VulnChecker()
-        self.ParamsAndBodyTravel: libs.llmService.ParamsAndBodyTravel = libs.llmService.ParamsAndBodyTravel()
         self.CodeChainTravel: libs.llmService.CodeChainTravel = libs.llmService.CodeChainTravel()
         self.all_funtion_list: list[Function] = []  # 一个challenge下面所有的方法，这有问题吧？
+        #self.ParamsAndBodyTravel: libs.llmService.ParamsAndBodyTravel = libs.llmService.ParamsAndBodyTravel(self.all_funtion_list)
         self.call_graph = nx.DiGraph()  # nx.DiGraph 是 NetworkX 提供的一个类，用于创建和操作有向图。
         self.vuln_chain_dict: dict[str, list[VulnChain]] = {}  # (sink函数名) 是字典中的 key，而 vuln_chain 是字典中的 value
-
+        self.node = []  # 初始化为空列表
         self.da_li_chu_qi_ji_mode = False
 
     def code_chain_generate(self):
-        """
-        遍历vuln_chain_dict取出每一条链子组装成code_chain_dict,
-        """
-        for function_name, vuln_chain_list in self.vuln_chain_dict.items():
-            for vuln_chain in vuln_chain_list:  # 在这里处理每个 VulnChain 对象
-                # chain = CodeChain()#需要的是sink函数的名字，参数，
-                sink = vuln_chain.vuln_chain_function[-1]  # 这里取最后一个也就是sink点
-                self.CodeChainTravel.chain_generate(vuln_chain)
-                input_chain = self.CodeChainTravel.to_json(vuln_chain, sink)
-                output = self.CodeChainTravel.analysis_chain(input_chain)
-                challenge_dir_name = os.path.basename(self.challenge_dir)
-                output_dir = os.path.join("F:/juliet/datacon_model/result", self.vuln_type,
-                                          f"{challenge_dir_name}.json")
-                # 确保目标文件夹存在
-                os.makedirs(os.path.dirname(output_dir), exist_ok=True)
-                # 将 JSON 数据追加到文件中
-                with open(output_dir, "a", encoding="utf-8") as file:
-                    # 写入 JSON 数据，确保格式正确
-                    json.dump(output, file, indent=4, ensure_ascii=False)
-                    print("JSON 数据已写入指定路径")
-                    print("JSON 数据已写入当前文件夹中的 result.json 文件")
+        if not self.node:
+            print("没有数据可处理，请检查上一步的分析结果。")
+            return
+
+        challenge_dir_name = os.path.basename(self.challenge_dir)
+        output_dir = os.path.join("result", self.vuln_type, challenge_dir_name, "answer")
+        os.makedirs(output_dir, exist_ok=True)
+
+        for index, node_data in enumerate(self.node):
+            try:
+                print(f"开始处理第 {index + 1} 个漏洞链数据...")
+
+                vuln_type = self.vuln_type
+                result_data = self.CodeChainTravel.analysis_chain(node_data, vuln_type)
+                print(f"第 {index + 1} 个数据分析完成。")
+
+                # 将结果保存到 JSON 文件，按顺序命名为 1.json, 2.json, 3.json 等
+                output_path = os.path.join(output_dir, f"{index + 1}.json")
+                with open(output_path, "w", encoding="utf-8") as file:
+                    json.dump(result_data, file, indent=4, ensure_ascii=False)
+                    print(f"结果已保存到: {output_path}")
+
+            except Exception as e:
+                print(f"处理第 {index + 1} 个漏洞链数据时出错: {e}")
 
     def travel_Params_And_Body(self):
         """
@@ -69,7 +72,10 @@ class Challenge:
         """
         for function_name, vuln_chain_list in self.vuln_chain_dict.items():
             for vuln_chain in vuln_chain_list:  # 在这里处理每个 VulnChain 对象
-                self.ParamsAndBodyTravel.audit_vulnerability_chain(vuln_chain)
+                ParamsAndBodyTravel= libs.llmService.ParamsAndBodyTravel(self.all_funtion_list)
+                result_node = ParamsAndBodyTravel.audit_vulnerability_chain(vuln_chain)
+                self.node.append(result_node)
+                #self.ParamsAndBodyTravel.audit_vulnerability_chain(vuln_chain)
 
     def get_file_list(self):
         """

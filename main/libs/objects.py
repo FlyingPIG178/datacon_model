@@ -24,10 +24,11 @@ class Function:
     """
     challenge中的一个文件中的方法的详情
     """
-    def __init__(self, name: str, body: str):
+    def __init__(self, name: str, body: str,param_list: list):
         self.name = name
         self.body = body
         self.call_site_list = []
+        self.param_list = param_list
         self.type = {
             "input": False, 
             "file_read": False, 

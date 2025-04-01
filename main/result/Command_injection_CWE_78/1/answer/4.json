@@ -1,0 +1,45 @@
+{
+    "function": "entry",
+    "taint_params": [
+        "command"
+    ],
+    "taint_actions": [
+        "    command = input(\"Enter command: \")",
+        "    process(command)"
+    ],
+    "calls": [
+        {
+            "function": "process",
+            "taint_params": [
+                "data"
+            ],
+            "taint_actions": [
+                "def process(data):",
+                "    sanitize(data)",
+                "    execute(data)"
+            ],
+            "calls": [
+                {
+                    "function": "execute",
+                    "taint_params": [
+                        "cmd"
+                    ],
+                    "taint_actions": [
+                        "def execute(cmd):",
+                        "    eval(cmd)"
+                    ],
+                    "calls": []
+                }
+            ]
+        }
+    ],
+    "vulnerability_analysis": {
+        "存在漏洞": true,
+        "漏洞函数": "execute",
+        "漏洞类型": "Command_injection_CWE_78",
+        "利用方式": "用户输入的恶意命令拼接到 'Enter command: ' 中，例如：'; ls /'",
+        "威胁评分": 9,
+        "修复建议": "使用参数化查询或者白名单验证机制，避免直接执行用户输入的命令；使用安全函数替换 eval，如 subprocess.Popen 或 os.system 等。",
+        "分析理由": "在调用链中，'entry' 函数接收用户输入的命令，并通过 'process' 函数传递给 'execute' 函数，而 'execute' 函数直接使用 eval 命令执行了传递的命令。这个过程没有对输入的命令进行严格的验证和过滤，导致用户可以输入任意命令并执行，存在命令注入漏洞。由于用户可以完全控制执行命令的内容，攻击者可以利用这一点执行任意系统命令，对系统安全构成严重威胁。因此，该漏洞链的存在具有相当高的威胁评分。"
+    }
+}

@@ -467,8 +467,8 @@ class PyFileParser:
             function_nodes = query.captures(tree.root_node)["function"]
             for function_node in function_nodes:
                 function_body = function_node.text
-                function_name, function_call_sites = FunctionParser().get_function_name_and_callsites(function_body)
-                function = Function(function_name, function_body)
+                function_name, function_call_sites, function_param_list = FunctionParser().get_function_name_and_callsites(function_body)
+                function = Function(function_name, function_body,function_param_list)
                 function.setCallSites(function_call_sites)
                 functions.append(function)
             if not functions:

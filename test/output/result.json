@@ -1,0 +1,58 @@
+{
+  "function": "entry",
+  "taint_params": [
+    "command"
+  ],
+  "taint_actions": [
+    "    command = input(\"Enter command: \")  # \u2705 source",
+    "    process(command)"
+  ],
+  "calls": [
+    {
+      "function": "process",
+      "taint_params": [
+        "data"
+      ],
+      "taint_actions": [
+        "def process(data):",
+        "    sanitize(data)                      # \u2705 \u6e05\u6d17\u51fd\u6570",
+        "    execute(data)                       "
+      ],
+      "calls": [
+        {
+          "function": "sanitize",
+          "taint_params": [
+            "",
+            "s"
+          ],
+          "taint_actions": [
+            "def entry():",
+            "    command = input(\"Enter command: \")  # \u2705 source",
+            "    process(command)",
+            "def process(data):",
+            "    sanitize(data)                      # \u2705 \u6e05\u6d17\u51fd\u6570",
+            "    execute(data)                       ",
+            "def sanitize(s):",
+            "    if ';' in s:",
+            "        s = s.replace(';', '')           # \u2705 \u6e05\u6d17\u64cd\u4f5c",
+            "    return s",
+            "def execute(cmd):",
+            "    eval(cmd)                            # \u26a0\ufe0f \u6267\u884c\u547d\u4ee4"
+          ],
+          "calls": []
+        },
+        {
+          "function": "execute",
+          "taint_params": [
+            "cmd"
+          ],
+          "taint_actions": [
+            "def execute(cmd):",
+            "    eval(cmd)                            # \u26a0\ufe0f \u6267\u884c\u547d\u4ee4"
+          ],
+          "calls": []
+        }
+      ]
+    }
+  ]
+}

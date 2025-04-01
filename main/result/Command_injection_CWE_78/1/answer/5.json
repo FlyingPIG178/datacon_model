@@ -1,0 +1,33 @@
+{
+    "function": "process",
+    "taint_params": [
+        "data"
+    ],
+    "taint_actions": [
+        "def process(data):",
+        "    sanitize(data)",
+        "    execute(data)"
+    ],
+    "calls": [
+        {
+            "function": "execute",
+            "taint_params": [
+                "cmd"
+            ],
+            "taint_actions": [
+                "def execute(cmd):",
+                "    eval(cmd)"
+            ],
+            "calls": []
+        }
+    ],
+    "vulnerability_analysis": {
+        "存在漏洞": true,
+        "漏洞函数": "execute",
+        "漏洞类型": "Command Injection (CWE-78)",
+        "利用方式": "在data参数中输入恶意命令，例如：';rm -rf /;'",
+        "威胁评分": 8,
+        "修复建议": "避免使用eval等不安全的方法执行命令；使用白名单验证输入；对所有输入进行严格的过滤和转义；使用参数化的API或库执行外部命令。",
+        "分析理由": "在调用链中，函数'process'接收参数'data'，未明确指出进行了哪些具体的'sanitize'操作。随后，'process'调用'execute'函数，并传入'data'参数。'execute'函数直接使用'eval'执行'cmd'，若'cmd'未经充分验证和清理，攻击者可通过外部输入控制'data'参数，导致'eval'执行恶意命令，因此存在命令注入漏洞。因为'eval'会执行字符串作为代码，使得攻击者有机会执行任意代码，所以威胁评分较高。"
+    }
+}
