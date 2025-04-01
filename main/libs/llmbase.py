@@ -81,14 +81,14 @@ class LLM_WITHOUT_MEMORY():
         #openai_api_key = openai_api_key,
         #openai_api_base = openai_api_base,
         #model_name = model_name,
-        openai_api_key='sk-X2p7786OjJhhTPlkxr70F8QdK2qmxrK4PsA4inmJWqxyhAeu',
-        openai_api_base='https://api.moonshot.cn/v1',
-        model_name='moonshot-v1-8k',
-        timeout=300
+        openai_api_key=Config.openai_api_key,
+        openai_api_base=Config.openai_api_base,
+        model_name=Config.model_name,
+        timeout=Config.timeout
         )
         self.count = 0
 
-    #同时输入SystemMessage和HumanMessage    
+    #同时输入SystemMessage和HumanMessage
     def chat(self,syscontent,humancontent):
         """
         系统消息，定义对话的上下文或模型的角色.用户消息，表示用户的输入内容
@@ -124,11 +124,10 @@ class LLM_MEMORY():
         self.llm = ChatOpenAI(
         streaming=True,
         verbose=True,
-        # key和base开赛后提供
-        openai_api_key='sk-X2p7786OjJhhTPlkxr70F8QdK2qmxrK4PsA4inmJWqxyhAeu',
-        openai_api_base='https://api.moonshot.cn/v1',
-        model_name='moonshot-v1-8k',
-        timeout=300
+        openai_api_key=Config.openai_api_key,
+        openai_api_base=Config.openai_api_base,
+        model_name=Config.model_name,
+        timeout=Config.timeout
         )
         self.count = 0
         #初始化会话记忆，先前的会话会以Summary的形式存储下来
