@@ -46,7 +46,7 @@ class Challenge:
             return
 
         challenge_dir_name = os.path.basename(self.challenge_dir)
-        output_dir = os.path.join("result", self.vuln_type, challenge_dir_name, "answer")
+        output_dir = os.path.join("results", challenge_dir_name)
         os.makedirs(output_dir, exist_ok=True)
 
         for index, node_data in enumerate(self.node):

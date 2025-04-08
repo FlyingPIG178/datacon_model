@@ -587,11 +587,11 @@ class CodeChainTravel:
                     llm_output = self.resolve_output(llm_output)
                 else:
                     print("大模型分析成功。")
-                    node_data["vulnerability_analysis"] = llm_output.get("vulnerability_analysis", {})
+                    node_data["vulnerability_analysis"] = llm_output.get("漏洞分析", {})
                     return node_data
                 if llm_output is not None:
                     print("大模型分析成功。")
-                    node_data["vulnerability_analysis"] = llm_output.get("vulnerability_analysis", {})
+                    node_data["vulnerability_analysis"] = llm_output.get("漏洞分析", {})
                     return node_data
 
                 count += 1

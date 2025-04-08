@@ -1,0 +1,9 @@
+__pycache__/
+/challenges/
+/results/
+/settings/
+/prompt/
+venv/
+.idea/
+*.pyc
+*.pyo
