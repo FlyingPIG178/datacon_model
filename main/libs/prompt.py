@@ -219,19 +219,64 @@ class FunctionAnalysisPrompt:
 
     Command_injection_prompt = """
         #设定
-        你是一个分析经验丰富的代码安全分析人员，能够精准分析函数功能。
-        ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>
-        #任务
-        1. 判断该函数代码是否调用了可能导致命令注入漏洞的函数，如调用system，exec，popen，shell_exec，eval，os.system这类函数。
-        2. 判断该函数代码是否包含网络报文的处理，如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来部网络消息的处理。
-        3. 让我们一步步地进行推理。
-        #输出结果
-        请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
-        ```json
-        {
-            input:bool（是否处理来自网络的消息和报文）,
-            command:bool（是否调用了可能导致命令注入漏洞的函数）,
-        }```
+你是一个跨语言代码安全分析专家，擅长精准判断命令注入漏洞和数据流风险。
+
+##任务
+请根据以下原则分析函数代码：
+
+1. ## 命令执行（command）标记规则
+仅当函数内部调用了系统标准库或官方内置的命令执行函数时，才标记 command:true。
+
+语言危险函数如下但不限于：
+
+Python 的命令执行函数包括：
+- os.system
+- subprocess.run
+- subprocess.Popen
+- eval
+- exec
+
+C/C++ 的命令执行函数包括：
+- system
+- popen
+- exec 系列函数
+- fork+exec
+- CreateProcess
+- ShellExecute
+
+Java 的命令执行函数包括：
+- Runtime.getRuntime().exec()
+- ProcessBuilder.start()
+
+Go 的命令执行函数包括：
+- os/exec.Command
+- Cmd.Run
+- Cmd.Start
+
+JavaScript (Node.js) 的命令执行函数包括：
+- child_process.exec
+- execSync
+- spawn
+
+若调用的不是上述危险函数（例如仅仅是用户自定义函数），请标记 command:false。
+2.  ## 输入数据处理（input）标记规则
+- 仅当函数内部存在主动的外部数据读取行为时，才标记 input:true。
+- 判断标准：
+  - 包括但不限于以下函数或 API：
+    - Python: input(), sys.stdin, request.get(), request.data
+    - C/C++: scanf, fgets, read, recv
+    - Java: Scanner.nextLine(), request.getParameter()
+    - Go: fmt.Scan(), bufio.NewReader().ReadString()
+    - JavaScript: request.query, request.body
+- 如果该函数仅作为参数传递、中转处理、或字符串操作，没有主动读取外部输入数据，请标记 input:false
+
+##输出格式
+仅输出符合规范的纯JSON数据：
+```json
+{
+    "input": bool,  # 是否处理外部输入或网络消息
+    "command": bool # 是否调用了系统内置的命令执行函数
+}```
         #限制
         1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
         """
