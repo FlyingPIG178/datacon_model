@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import time
+import traceback
 from typing import Tuple, Dict, List, Any
 
 from . import llmbase
@@ -560,6 +561,7 @@ class CodeChainTravel:
                 content = self.fix_json_escape(content)
                 json_obj = json.loads(content)
             return json_obj
+
         except json.JSONDecodeError as e:
             logging.error("JSON格式解析错误:", e)
             return None
@@ -588,25 +590,29 @@ class CodeChainTravel:
             count = 0
             llm_output = self.llm.communicate(prompt, None)
             llm_output = self.resolve_output(llm_output)
+
             while count <= Config.retry_times:
                 if llm_output is None:
                     logging.info(f"大模型结果漏洞分析失败，第{count}次尝试重新请求大模型:")
                     count = count + 1
+
                     # time.sleep(5)  # 增加延迟时间，指数回退
+
                     llm_output = self.llm.communicate(prompt, None)
                     llm_output = self.resolve_output(llm_output)
                 else:
                     print("大模型分析成功。")
-                    node_data["漏洞分析"] = llm_output.get("漏洞分析", {})
+                    node_data["漏洞分析"] = llm_output
                     return node_data
+
                 if llm_output is not None:
                     print("大模型分析成功。")
-                    node_data["漏洞分析"] = llm_output.get("漏洞分析", {})
+                    node_data["漏洞分析"] = llm_output
                     return node_data
 
                 count += 1
                 logging.info(f"大模型结果解析失败，第 {count} 次重试...")
-                llm_output = self.llm.communicate(prompt)
+                llm_output = self.llm.communicate(prompt, None)
 
             logging.error("所有重试均失败，无法获取大模型结果。")
             return node_data

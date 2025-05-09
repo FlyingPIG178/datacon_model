@@ -117,10 +117,9 @@ class FunctionParsePrompt:
     5. **修复建议**：提供针对该漏洞的有效修复方法。
     6. **分析理由**：提供详细的分析过程，解释为什么该漏洞链存在威胁。
 
-    将以下json数据作为成员加入调用链数据返回：
+    返回以下json数据
     ```json
     {{
-      "漏洞分析": {{
         "存在漏洞": true 或 false,
         "漏洞函数": "函数名",
         "漏洞类型": "漏洞类型",
@@ -128,8 +127,10 @@ class FunctionParsePrompt:
         "威胁评分": 0-10,
         "修复建议": "修复建议",
         "分析理由": "详细的分析理由"
-      }}
     }}
+    ```
+    ##限制
+    1. 输出结果以JSON的纯文本形式返回，除json外不要返回任何内容，确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
     """
 
 
@@ -137,85 +138,207 @@ class FunctionAnalysisPrompt:
     # is_input_prompt =
     Arbitrary_file_access_prompt = """
     #设定
-    你是一个分析经验丰富的代码安全分析人员，能够精准分析函数功能。
-    #输入
-    ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>
-    #任务
-    1.分析该函数代码是否调用了读取文件的函数，如open()、ReadFile()等函数。
-    2.判断该函数代码是否包含输入操作（如从shell，网络中任何可以获取输入的操作）
-    3. 让我们一步步地进行推理。
-    #输出结果
-    请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
+    你是一个跨语言代码安全分析专家，擅长精准判断文件访问相关漏洞和数据流风险。
+
+    ##任务
+    请根据以下原则分析函数代码：
+
+    1. ## 文件读取（file_read）标记规则
+    仅当函数内部调用了系统标准库或官方内置的文件读取函数时，才标记 file_read:true。
+
+    语言危险函数如下但不限于：
+    - Python: open(), read(), readline(), readlines(), os.read()
+    - C/C++: fopen(), fread(), read(), fgets()
+    - Java: FileInputStream, BufferedReader.readLine(), Files.readAllBytes()
+    - Go: os.Open(), ioutil.ReadFile(), os.ReadFile()
+    - JavaScript (Node.js): fs.readFile(), fs.readFileSync()
+
+    若调用的不是上述危险函数（例如仅仅是用户自定义函数），请标记 file_read:false。
+
+    2. ## 输入数据处理（input）标记规则
+    - 仅当函数内部存在主动的外部数据读取行为时，才标记 input:true。
+    - 判断标准：
+      - 包括但不限于以下函数或 API：
+        - Python: input(), sys.stdin, request.get(), request.data
+        - C/C++: scanf, fgets, read, recv
+        - Java: Scanner.nextLine(), request.getParameter()
+        - Go: fmt.Scan(), bufio.NewReader().ReadString()
+        - JavaScript: request.query, request.body
+    - 如果该函数仅作为参数传递、中转处理、或字符串操作，没有主动读取外部输入数据，请标记 input:false。
+
+    ##输出格式
+    仅输出符合规范的纯JSON数据：
     ```json
     {
-        input:bool(是否有输入操作),
-        file_read:bool(是否进行文件读取),
-    }```
-    #限制
-    1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
+        "input": bool,
+        "file_read": bool
+    }
+    ```
+
+    ##限制
+    1. 输出结果以JSON的纯文本形式返回，除json外不要返回任何内容，确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
     """
 
-    Authentication_bypass_prompt = """
-    #设定
-    你是一个分析经验丰富的代码安全分析人员，能够精准分析函数功能。
-    #输入
-    ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>
-    #任务
-    1. 分析该函数代码是否包含权限认证的相关操作，如检查当前用户是否有权限访问目标资源等等。
-    2. 判断调用链中是否存判断该函数代码是否包含网络报文的处理，如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来部网络消息的处理。在对不受信任的外部数据的解析和处理（如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来自外部消息的请求处理。）  
-    3. 让我们一步步地进行推理。
-    #输出结果
-    请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
-    ```json
-    {
-        input:bool（是否处理来自网络的消息和报文）,
-        authentication:bool（是否包含权限验证的相关操作）,
-    }```
-    #限制
-    1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
-    """
+    Authentication_bypass_prompt = authentication_bypass_prompt = """
+#设定
+你是一个跨语言代码安全分析专家，擅长精准判断权限认证相关漏洞和数据流风险。
+
+##任务
+请根据以下原则分析函数代码：
+
+1. ## 权限认证（authentication）标记规则
+仅当函数内部包含明确的权限验证操作时，才标记 authentication:true。
+- 判断标准：
+  - 检查用户权限的操作，例如：
+    - Python: flask_login.current_user, django.contrib.auth
+    - Java: SecurityManager.checkPermission(), request.isUserInRole()
+    - C/C++: Custom permission checks (e.g., user ID comparison)
+    - Go: context.User, middleware authentication checks
+    - JavaScript: req.user, passport.authenticate()
+  - 涉及用户身份验证、角色检查、令牌验证等操作。
+- 若函数不包含权限验证相关逻辑，请标记 authentication:false。
+
+2. ## 输入数据处理（input）标记规则
+- 仅当函数内部存在主动的外部数据读取行为或处理网络报文时，才标记 input:true。
+- 判断标准：
+  - 包括但不限于以下函数或 API：
+    - Python: input(), sys.stdin, request.get(), request.data
+    - C/C++: scanf, fgets, read, recv
+    - Java: Scanner.nextLine(), request.getParameter()
+    - Go: fmt.Scan(), bufio.NewReader().ReadString()
+    - JavaScript: request.query, request.body
+  - 处理网络报文，如web请求、API请求、数据库请求等。
+- 如果该函数仅作为参数传递、中转处理、或字符串操作，没有主动读取外部输入数据，请标记 input:false。
+
+##输出格式
+仅输出符合规范的纯JSON数据：
+```json
+{
+    "input": bool,
+    "authentication": bool
+}
+```
+
+##限制
+1. 输出结果以JSON的纯文本形式返回，除json外不要返回任何内容，确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
+"""
 
     Buffer_overflow_prompt = """
-        #设定
-        你是一个分析经验丰富的代码安全分析人员，能够对函数进行精准分析。
-        #输入
-        ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>
-        #任务
-        1. 分析该代码调用了哪些系统库函数。
-        2. 判断该代码是否进行了内存操作，如调用strcpy,strcat,gets,sprintf,memcpy,_isoc99_sscanf函数
-        3. 判断该函数代码是否进行了可能导致内存安全问题的操作。
-        4. 判断该函数代码是否包含网络报文的处理，如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来部网络消息的处理。 
-        5. 进行详细的推理过程。
-        #输出结果
-        请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
-        ```json
-        {
-            input:bool（是否处理来自网络的消息和报文）, 
-            memoryOP:bool（是否进行了可能导致内存安全问题的操作）,
-        }```
-        #限制
-        1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
-        """
+#设定
+你是一个跨语言代码安全分析专家，擅长精准判断内存操作相关漏洞和数据流风险。
+
+##任务
+请根据以下原则分析函数代码：
+
+1. ## 内存操作（memoryOP）标记规则
+仅当函数内部调用了可能导致内存安全问题（如缓冲区溢出、越界访问）的操作时，才标记 memoryOP: true。
+
+- 判断标准：
+  - 包括但不限于以下语言特定的危险函数或操作：
+    - C/C++ 的危险函数：
+      - 字符串操作：`strcpy`, `strncpy`, `strcat`, `strncat`, `gets`, `sprintf`, `snprintf`, `vsprintf`
+      - 内存操作：`memcpy`, `memmove`, `memset`, `bcopy`, `bzero`
+      - 格式化输入：`_isoc99_sscanf`, `scanf`, `fscanf`
+      - 其他：`strlen`（若用于未检查的缓冲区计算）
+    - Python 的危险操作：
+      - `ctypes` 模块的内存操作：`ctypes.memmove`, `ctypes.memset`, `ctypes.c_buffer`
+      - 直接操作字节数组：`bytearray` 或 `bytes` 的未检查索引操作
+    - Java 的危险操作：
+      - `sun.misc.Unsafe` 类的方法：`getByte`, `putByte`, `copyMemory`, `allocateMemory`
+      - `System.arraycopy`（若未检查数组边界）
+      - `ByteBuffer` 的直接内存访问（若未验证偏移量或大小）
+    - Go 的危险操作：
+      - `unsafe` 包的使用：`unsafe.Pointer`, `unsafe.Sizeof`, `unsafe.Alignof`
+      - 切片操作：未检查边界的 `slice[i]` 或 `copy` 操作
+    - JavaScript (Node.js) 的危险操作：
+      - `Buffer` 类的操作：`Buffer.copy`, `Buffer.write`, `Buffer.read*`（若未检查偏移量或长度）
+      - 数组操作：未检查边界的 `ArrayBuffer` 或 `TypedArray` 访问
+    - PHP 的危险操作：
+      - PHP 通常不直接操作内存，但通过扩展（如 `FFI`）可能引入内存操作
+      - 字符串操作：`substr`, `str_repeat`（若处理超大输入导致内存溢出）
+  - 未检查边界或大小的场景：
+    - 内存拷贝操作（如 `memcpy`）未验证目标缓冲区大小或源数据长度。
+    - 字符串操作（如 `strcpy`）未检查目标缓冲区是否足以容纳输入。
+    - 数组或缓冲区索引操作未验证索引是否超出边界（例如，`buffer[i]` 未检查 `i`）。
+    - 用户输入直接用于内存分配或索引计算，未进行范围检查。
+- 若函数不包含上述危险函数或操作，或者操作已明确包含边界检查（如使用 `strncpy` 且指定了长度），请标记 memoryOP: false.
+
+2. ## 输入数据处理（input）标记规则
+- 仅当函数内部存在主动的外部数据读取行为或处理网络报文时，才标记 input:true。
+- 判断标准：
+  - 包括但不限于以下函数或 API：
+    - Python: input(), sys.stdin, request.get(), request.data
+    - C/C++: scanf, fgets, read, recv
+    - Java: Scanner.nextLine(), request.getParameter()
+    - Go: fmt.Scan(), bufio.NewReader().ReadString()
+    - JavaScript: request.query, request.body
+  - 处理网络报文，如web请求、API请求、数据库请求等。
+- 如果该函数仅作为参数传递、中转处理、或字符串操作，没有主动读取外部输入数据，请标记 input:false。
+
+##输出格式
+仅输出符合规范的纯JSON数据：
+```json
+{
+    "input": bool,
+    "memoryOP": bool
+}
+```
+
+##限制
+1. 输出结果以JSON的纯文本 form返回，除json外不要返回任何内容，确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
+"""
 
     Buffer_overflow_prompt_test = """
-        #设定
-        你是一个分析经验丰富的代码安全分析人员，能够对函数调用进行精准分析。
-        #输入
-        ##函反编译后的伪代码片段
-        #任务
-        1. 查看该代码调用了哪些系统库函数。
-        2. 该代码是否进行了内存操作，如调用memcpy函数
-        2. 判断该函数代码是否进行了可能导致内存安全问题的操作，如调用strcpy,strcat,gets,sprintf,memcpy,_isoc99_sscanf等。 
-        3. 进行详细的推理过程。
-        #输出结果
-        请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
-        ```json
-        {
-            memoryOP:bool（是否进行了内存操作）,
-        }```
-        #限制
-        1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
-        """
+#设定
+你是一个跨语言代码安全分析专家，擅长精准判断内存操作相关漏洞和数据流风险。
+
+##任务
+请根据以下原则分析函数代码：
+
+1. ## 内存操作（memoryOP）标记规则
+仅当函数内部调用了可能导致内存安全问题（如缓冲区溢出、越界访问）的操作时，才标记 memoryOP: true。
+
+- 判断标准：
+  - 包括但不限于以下语言特定的危险函数或操作：
+    - C/C++ 的危险函数：
+      - 字符串操作：`strcpy`, `strncpy`, `strcat`, `strncat`, `gets`, `sprintf`, `snprintf`, `vsprintf`
+      - 内存操作：`memcpy`, `memmove`, `memset`, `bcopy`, `bzero`
+      - 格式化输入：`_isoc99_sscanf`, `scanf`, `fscanf`
+      - 其他：`strlen`（若用于未检查的缓冲区计算）
+    - Python 的危险操作：
+      - `ctypes` 模块的内存操作：`ctypes.memmove`, `ctypes.memset`, `ctypes.c_buffer`
+      - 直接操作字节数组：`bytearray` 或 `bytes` 的未检查索引操作
+    - Java 的危险操作：
+      - `sun.misc.Unsafe` 类的方法：`getByte`, `putByte`, `copyMemory`, `allocateMemory`
+      - `System.arraycopy`（若未检查数组边界）
+      - `ByteBuffer` 的直接内存访问（若未验证偏移量或大小）
+    - Go 的危险操作：
+      - `unsafe` 包的使用：`unsafe.Pointer`, `unsafe.Sizeof`, `unsafe.Alignof`
+      - 切片操作：未检查边界的 `slice[i]` 或 `copy` 操作
+    - JavaScript (Node.js) 的危险操作：
+      - `Buffer` 类的操作：`Buffer.copy`, `Buffer.write`, `Buffer.read*`（若未检查偏移量或长度）
+      - 数组操作：未检查边界的 `ArrayBuffer` 或 `TypedArray` 访问
+    - PHP 的危险操作：
+      - PHP 通常不直接操作内存，但通过扩展（如 `FFI`）可能引入内存操作
+      - 字符串操作：`substr`, `str_repeat`（若处理超大输入导致内存溢出）
+  - 未检查边界或大小的场景：
+    - 内存拷贝操作（如 `memcpy`）未验证目标缓冲区大小或源数据长度。
+    - 字符串操作（如 `strcpy`）未检查目标缓冲区是否足以容纳输入。
+    - 数组或缓冲区索引操作未验证索引是否超出边界（例如，`buffer[i]` 未检查 `i`）。
+    - 用户输入直接用于内存分配或索引计算，未进行范围检查。
+- 若函数不包含上述危险函数或操作，或者操作已明确包含边界检查（如使用 `strncpy` 且指定了长度），请标记 memoryOP: false.
+
+##输出格式
+仅输出符合规范的纯JSON数据：
+```json
+{
+    "memoryOP": bool
+}
+```
+
+##限制
+1. 输出结果以JSON的纯文本形式返回，除json外不要返回任何内容，确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
+"""
 
     Command_injection_prompt = """
         #设定
@@ -282,43 +405,88 @@ JavaScript (Node.js) 的命令执行函数包括：
         """
 
     Integer_overflow_prompt = """
-        #设定
-        你是一个分析经验丰富的代码安全分析人员，能够精准分析函数功能。
-        ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>
-        #任务
-        1. 判断该函数代码是否进行了可能导致整数溢出的运算操作，如加减乘除法，有符号数赋值给无符号数等等，且这个运算的结果需要传递给内存分配操作或数组索引等容易造成内存安全的函数作为参数。
-        2. 判断该函数代码是否包含网络报文的处理，如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来部网络消息的处理。
-        3. 让我们一步步地进行推理。
-        #输出结果
-        请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
-        ```json
-        {
-            input:bool（是否处理来自网络的消息和报文）,
-            integer:bool（是否进行了可能导致整数溢出的操作）,
-        }```
-        #限制
-        1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
-        """
+#设定
+你是一个跨语言代码安全分析专家，擅长精准判断整数溢出相关漏洞和数据流风险。
+
+##任务
+请根据以下原则分析函数代码：
+
+1. ## 整数溢出（integer）标记规则
+仅当函数内部包含可能导致整数溢出的运算操作且结果用于内存分配或数组索引等可能引发内存安全问题的操作时，才标记 integer:true。
+- 判断标准：
+  - 包括但不限于以下情况：
+    - 未检查边界的加、减、乘、除运算。
+    - 有符号数赋值给无符号数，可能导致负值变成大正数。
+    - 运算结果传递给内存分配函数（如malloc, new）或数组索引。
+- 若函数不包含上述危险操作，请标记 integer:false。
+
+2. ## 输入数据处理（input）标记规则
+- 仅当函数内部存在主动的外部数据读取行为或处理网络报文时，才标记 input:true。
+- 判断标准：
+  - 包括但不限于以下函数或 API：
+    - Python: input(), sys.stdin, request.get(), request.data
+    - C/C++: scanf, fgets, read, recv
+    - Java: Scanner.nextLine(), request.getParameter()
+    - Go: fmt.Scan(), bufio.NewReader().ReadString()
+    - JavaScript: request.query, request.body
+  - 处理网络报文，如web请求、API请求、数据库请求等。
+- 如果该函数仅作为参数传递、中转处理、或字符串操作，没有主动读取外部输入数据，请标记 input:false。
+
+##输出格式
+仅输出符合规范的纯JSON数据：
+```json
+{
+    "input": bool,
+    "integer": bool
+}
+```
+
+##限制
+1. 输出结果以JSON的纯文本形式返回，除json外不要返回任何内容，确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
+"""
 
     others_prompt = """
-        #设定
-        你是一个分析经验丰富的代码安全分析人员，能够精准分析代码中可能存在安全问题的地方。
-        ##函数代码片段：<包含了反编译伪代码，C，C++，java，python，go，js等语言>
-        #任务
-        1. 判断该代码的是否包含SQL操作，反序列化操作，格式化字符串操作等容易引起漏洞的操作。
-        1. 判断该函数代码是否包含可能导致SQL注入，反序列化漏洞，SSRF，XSS，UAF，条件竞争，格式化字符串等漏洞的操作。
-        2. 判断该函数代码是否包含网络报文的处理，如web请求处理、网络协议请求处理、api请求处理、数据库请求处理等来部网络消息的处理。
-        3. 让我们一步步地进行推理。
-        #输出结果
-        请务必严格按照以下JSON格式返回分析结果，请确保生成格式正确的结果：
-        ```json
-        {
-            input:bool（是否处理来自网络的消息和报文）,
-            others:bool（是否包含可能导致SQL注入，反序列化漏洞，SSRF，XSS，UAF，条件竞争，格式化字符串等漏洞的操作）,
-        }```
-        #限制
-        1. 输出结果以JSON的纯文本形式返回,除json外不要返回任何内容,确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
-        """
+#设定
+你是一个跨语言代码安全分析专家，擅长精准判断多种安全漏洞和数据流风险。
+
+##任务
+请根据以下原则分析函数代码：
+
+1. ## 其他漏洞（others）标记规则
+仅当函数内部包含可能导致以下漏洞的操作时，才标记 others:true：
+- SQL注入：动态拼接SQL查询字符串，未使用参数化查询。
+- 反序列化漏洞：调用不安全的反序列化函数（如Python的 pickle.load(), Java’s ObjectInputStream.readObject()）。
+- SSRF：发起未验证的外部HTTP请求。
+- XSS：未转义用户输入直接输出到HTML/JS上下文。
+- UAF（Use-After-Free）：释放后继续使用指针或对象。
+- 条件竞争：多线程操作共享资源未加锁。
+- 格式化字符串：使用未过滤的用户输入作为格式化字符串（如C的 printf）。
+- 若函数不包含上述危险操作，请标记 others:false。
+
+2. ## 输入数据处理（input）标记规则
+- 仅当函数内部存在主动的外部数据读取行为或处理网络报文时，才标记 input:true。
+- 判断标准：
+  - 包括但不限于以下函数或 API：
+    - Python: input(), sys.stdin, request.get(), request.data
+    - C/C++: scanf, fgets, read, recv
+    - Java: Scanner.nextLine(), request.getParameter()
+    - Go: fmt.Scan(), bufio.NewReader().ReadString()
+    - JavaScript: request.query, request.body
+  - 处理网络报文，如web请求、API请求、数据库请求等。
+- 如果该函数仅作为参数传递、中转处理、或字符串操作，没有主动读取外部输入数据，请标记 input:false。
+
+##输出格式
+仅输出符合规范的纯JSON数据：
+```json
+{
+    "input": bool,
+    "others": bool
+}
+```
+
+##限制
+1. 输出结果以JSON的纯文本形式返回，除json外不要返回任何内容，确保JSON格式标准化，输出前后无多余空行或注释，严格按照要求格式输出。
+"""
 
 
 class BoolVulnCheckPrompt:

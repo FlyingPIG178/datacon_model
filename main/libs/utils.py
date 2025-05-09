@@ -125,12 +125,13 @@ class CFileParser:
             if tree != None:
                 logging.debug(f"{file.file_path}文件语法树构建成功！！！")
                 functions: list[Function] = self.getFunctions(tree)
+                return functions
             else:
                 raise ValueError("语法树为空")
         except Exception as e:
             logging.error(f"{file.file_path}文件语法树构建失败！！！")
             logging.error(traceback.format_exc())
-        return functions
+
 
     def getFunctions(self, tree: Tree) -> list[Function]:
         """传入方法的语法树,返回方法列表"""
@@ -142,14 +143,15 @@ class CFileParser:
         logging.debug("正在查询文件AST中所有的方法节点，并构建Function列表...")
 
         for functionNode in functionNodes:
-            fn = self.getFunctionName(functionNode).decode("utf-8")
+            fn = self.getFunctionName(functionNode)
             fc = self.getFunctionCallSites(functionNode)
             if (fn != None and fc != None):
-                functionName = self.getFunctionName(functionNode).decode("utf-8")
+                functionName = self.getFunctionName(functionNode)
                 functionBody = functionNode.text
                 fc = self.getFunctionCallSites(functionNode)
                 functionCallSites = self.getFunctionCallSites(functionNode)
-                function = Function(functionName, functionBody)
+                function_name, function_call_sites, function_param_list = FunctionParser().get_function_name_and_callsites(functionBody)
+                function = Function(functionName, str(functionBody), function_param_list)
                 function.setCallSites(functionCallSites)
                 functions.append(function)
         if (functions.count == 0):
@@ -170,15 +172,13 @@ class CFileParser:
             function_name_queryer = Query(
                 self.language, """	(identifier)@function_name"""
             )
-            name = function_name_queryer.captures(function_declarator)["function_name"][
-                0
-            ].text
+            name = function_name_queryer.captures(function_declarator)["function_name"][0].text
             logging.info(f"提取到了文件的{name}方法！！！！")
-            return name
+            return str(name)
         except Exception as e:
             logging.error("提取方法名失败！！！！原因:{e}")
             logging.error(traceback.format_exc())
-            return None
+            return ""
 
     def getFunctionCallSites(self, node: Node) -> list[str]:
         try:
@@ -197,7 +197,7 @@ class CFileParser:
                 logging.warning("没有提取到调用点!")
                 return []
         except Exception as e:
-            return None
+            return []
 
     def get_block(self, tree: Tree):
         root_node = tree.root_node
@@ -230,9 +230,9 @@ class BlockFileParser:
         functions = []
         logging.info("代码切片成功！！！")
         for code_body in code_list:
-            functionName, functionCallSites = FunctionParser().get_function_name_and_callsites(code_body)
             functionBody = code_body
-            function = Function(functionName, functionBody)
+            functionName, functionCallSites, function_param_list = FunctionParser().get_function_name_and_callsites(functionBody)
+            function = Function(functionName, functionBody, function_param_list)
             function.setCallSites(functionCallSites)
             functions.append(function)
         if (functions.count == 0):
@@ -309,12 +309,13 @@ class GoFileParser:
             if tree != None:
                 logging.info(f"{file.file_path}文件语法树构建成功！！！")
                 functions: list[Function] = self.getFunctions(tree)
+                return functions
             else:
                 raise ValueError("语法树为空")
         except Exception as e:
             logging.error(f"{file.file_path}文件语法树构建失败！！！")
             logging.error(traceback.format_exc())
-        return functions
+
 
     def getFunctions(self, tree) -> list[Function]:
         """解析文件，返回函数列表，go这里函数调用点为空，需要后续语法解析的阶段补上函数调用点"""
@@ -324,8 +325,8 @@ class GoFileParser:
             function_nodes = query.captures(tree.root_node)["function"]
             for function_node in function_nodes:
                 function_body = function_node.text
-                function_name, function_call_sites = FunctionParser().get_function_name_and_callsites(function_body)
-                function = Function(function_name, function_body)
+                function_name, function_call_sites, function_param_list = FunctionParser().get_function_name_and_callsites(function_body)
+                function = Function(function_name, str(function_body), function_param_list)
                 function.setCallSites(function_call_sites)
                 functions.append(function)
             if not functions:
@@ -356,12 +357,12 @@ class TsFileParser:
             if tree != None:
                 logging.info(f"{file.file_path}文件语法树构建成功！！！")
                 functions: list[Function] = self.getFunctions(tree)
+                return functions
             else:
                 raise ValueError("语法树为空")
         except Exception as e:
             logging.error(f"{file.file_path}文件语法树构建失败！！！")
             logging.error(traceback.format_exc())
-        return functions
 
     def getFunctions(self, tree) -> list[Function]:
         """解析文件，返回函数列表，go这里函数调用点为空，需要后续语法解析的阶段补上函数调用点"""
@@ -371,9 +372,8 @@ class TsFileParser:
             function_nodes = query.captures(tree.root_node)["function"]
             for function_node in function_nodes:
                 function_body = function_node.text
-                function_name, function_call_sites = FunctionParser().get_function_name_and_callsites(function_body)
-
-                function = Function(function_name, function_body)
+                function_name, function_call_sites, function_param_list = FunctionParser().get_function_name_and_callsites(function_body)
+                function = Function(function_name, str(function_body), function_param_list)
                 function.setCallSites(function_call_sites)
                 functions.append(function)
             if not functions:
@@ -404,13 +404,14 @@ class PhpFileParser:
             if tree != None:
                 logging.info(f"{file.file_path}文件语法树构建成功！！！")
                 functions: list[Function] = self.getFunctions(tree)
+                return functions
             else:
                 logging.error(f"{file.file_path}文件语法树构建失败")
                 raise ValueError("语法树为空")
         except Exception as e:
             logging.error(f"{file.file_path}文件语法树构建失败！！！")
             logging.error(traceback.format_exc())
-        return functions
+
 
     def getFunctions(self, tree) -> list[Function]:
         """解析文件，返回函数列表，go这里函数调用点为空，需要后续语法解析的阶段补上函数调用点"""
@@ -420,8 +421,8 @@ class PhpFileParser:
             function_nodes = query.captures(tree.root_node)["function"]
             for function_node in function_nodes:
                 function_body = function_node.text
-                function_name, function_call_sites = FunctionParser().get_function_name_and_callsites(function_body)
-                function = Function(function_name, function_body)
+                function_name, function_call_sites, function_param_list = FunctionParser().get_function_name_and_callsites(function_body)
+                function = Function(function_name, str(function_body), function_param_list)
                 function.setCallSites(function_call_sites)
                 functions.append(function)
             if not functions:
@@ -452,12 +453,13 @@ class PyFileParser:
             if tree != None:
                 logging.info(f"{file.file_path}文件语法树构建成功！！！")
                 functions: list[Function] = self.getFunctions(tree)
+                return functions
             else:
                 raise ValueError("语法树为空")
         except Exception as e:
             logging.error(f"{file.file_path}文件语法树构建失败！！！")
             logging.error(traceback.format_exc())
-        return functions
+
 
     def getFunctions(self, tree) -> list[Function]:
         """解析文件，返回函数列表，go这里函数调用点为空，需要后续语法解析的阶段补上函数调用点"""
@@ -468,7 +470,7 @@ class PyFileParser:
             for function_node in function_nodes:
                 function_body = function_node.text
                 function_name, function_call_sites, function_param_list = FunctionParser().get_function_name_and_callsites(function_body)
-                function = Function(function_name, function_body,function_param_list)
+                function = Function(function_name, str(function_body),function_param_list)
                 function.setCallSites(function_call_sites)
                 functions.append(function)
             if not functions:
@@ -499,12 +501,12 @@ class JavaFileParser:
             if tree != None:
                 logging.info(f"{file.file_path}文件语法树构建成功！！！")
                 functions: list[Function] = self.getFunctions(tree)
+                return functions
             else:
                 raise ValueError("语法树为空")
         except Exception as e:
             logging.error(f"{file.file_path}文件语法树构建失败！！！")
             logging.error(traceback.format_exc())
-        return functions
 
     def getFunctions(self, tree) -> list[Function]:
         """解析文件，返回函数列表，go这里函数调用点为空，需要后续语法解析的阶段补上函数调用点"""
@@ -514,8 +516,8 @@ class JavaFileParser:
             function_nodes = query.captures(tree.root_node)["function"]
             for function_node in function_nodes:
                 function_body = function_node.text
-                function_name, function_call_sites = FunctionParser().get_function_name_and_callsites(function_body)
-                function = Function(function_name, function_body)
+                function_name, function_call_sites, function_param_list = FunctionParser().get_function_name_and_callsites(function_body)
+                function = Function(function_name, str(function_body), function_param_list)
                 function.setCallSites(function_call_sites)
                 functions.append(function)
             if not functions:
@@ -535,16 +537,17 @@ class JavaFileParser:
 
 class Merger:
     "合并两个同名方法，函数体是添加到后面，调用站点也是直接加到后面"
-
+    @staticmethod
     def merge_function(function1: Function, function2: Function):
         # 检查是否是同名方法
         if (function1.name != function2.name):
             logging.error(f"合并的两个方法名字不同！以方法1名字为准！")
         new_function_body = function1.body + function2.body
+        new_function_params = function1.param_list + function2.param_list
         # call site需要分两次合并，第一次取值，第二次合并,这里用copy确保不会对其他的方法有影响
         new_function_callsites = function1.call_site_list.copy()
         new_function_callsites.extend(function2.call_site_list)
-        new_function = Function(function1.name, new_function_body)
+        new_function = Function(function1.name, new_function_body, new_function_params)
         new_function.setCallSites(new_function_callsites)
         return new_function
 
@@ -598,7 +601,7 @@ class VulChainGenerator:
         except Exception as e:
             logging.error(f"调用图切片发生错误: {e}")
             logging.error(traceback.format_exc())
-            return None
+            return []
 
     def gen_source_sink_type_vulchain(self, source_type: str, sink_type: str, call_graph: nx.DiGraph):
         """
@@ -701,6 +704,7 @@ class VulChainGenerator:
                         "function_body": function.body,
                         "target_type": taget_type
                     }
+                    count = 1
                     try:
                         count=0
                         llm_output = self.llm.communicate(self.firstArgs_prompt, result)
