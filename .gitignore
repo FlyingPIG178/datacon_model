@@ -1,10 +1,18 @@
+# Python-generated files
 __pycache__/
 *.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
 /challenges/
 /results/
 /settings/
 /prompt/
-venv/
 .idea/
 *.pyc
 *.pyo
