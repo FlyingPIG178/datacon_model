@@ -13,7 +13,7 @@ from langchain.memory import ConversationTokenBufferMemory, ConversationSummaryM
 from langchain.chains import ConversationChain
 import json
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import tiktoken
 from .config import Config
 import logging

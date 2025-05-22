@@ -1,7 +1,7 @@
 from typing import List
 
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import logging
 import os
 
@@ -79,9 +79,9 @@ class Function:
         self.mini_body = mini_body
         logging.debug(f"设置函数 {self.name} 的迷你体: {mini_body}")
 
-    def add_tainted_param(self, param: [list]):
-        if param not in self.tainted_params:
-            self.tainted_params.append(param)
+    # def add_tainted_param(self, param: [list]):
+    #     if param not in self.tainted_params:
+    #         self.tainted_params.append(param)
 
 class VulnChain:
     """

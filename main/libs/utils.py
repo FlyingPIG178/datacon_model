@@ -8,7 +8,7 @@ import tree_sitter_c
 from tree_sitter import Language, Parser, Query, Node, Tree
 import os
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import tree_sitter_go
 import tree_sitter_java
 import tree_sitter_php

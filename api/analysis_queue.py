@@ -6,6 +6,7 @@ import logging
 import asyncio
 from typing import List, Dict, Optional, Callable, Any
 import importlib
+import traceback
 
 from main.Challenge import Challenge
 from .config import config

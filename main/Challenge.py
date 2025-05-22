@@ -5,7 +5,7 @@ from networkx import DiGraph
 from tree_sitter import Language, Node, Parser, Query, Tree
 import os
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import libs.llmService
 from libs.objects import ChallengeFile, Function, VulnChain
