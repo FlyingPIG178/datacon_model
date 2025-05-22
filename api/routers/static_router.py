@@ -15,7 +15,7 @@ class StaticRouter(RouterBase):
         """添加静态文件相关路由"""
         # 获取项目根目录
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        dist_dir = os.path.join(base_dir, 'dist')
+        dist_dir = os.path.join(base_dir, 'front')
         
         # 检查dist目录是否存在
         if not os.path.exists(dist_dir):

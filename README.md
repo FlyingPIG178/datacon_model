@@ -56,6 +56,6 @@ python server.py
 ├── api/            # 后端API实现
 ├── main/           # 核心分析逻辑
 │   ├── libs/       # 工具库
-├── dist/           # 前端构建文件
+├── front/           # 前端构建文件
 └── server.py       # 服务器入口
 ```
