@@ -14,5 +14,6 @@ wheels/
 /settings/
 /prompt/
 .idea/
+docs/
 *.pyc
 *.pyo

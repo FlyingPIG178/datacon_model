@@ -384,7 +384,7 @@ class ParamsAndBodyTravel:
         self.all_funtion_list = {func.name: func for func in functions}
         self.processed_functions = set()  # 全局集合，用于记录已处理的函数
 
-    def audit_vulnerability_chain(self, vuln_chain: [VulnChain]):
+    def audit_vulnerability_chain(self, vuln_chain: VulnChain):
         """
         先反转vuln_chain因为vuln_chain是单链结构所以直接顺序遍历找父节点
         reverse_traverse越界判断（parent是否存在）在处理节点处处理：抛出异常说明到结尾

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 import sys
 import os
+
+# 添加当前目录到Python路径
+src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+sys.path.append(src_dir)
+
 import logging
 import asyncio
 import argparse
 from aiohttp import web
 from api import create_app
 
-# 添加当前目录到Python路径
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="启动分析服务")

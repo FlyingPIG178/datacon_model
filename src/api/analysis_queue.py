@@ -8,7 +8,7 @@ from typing import List, Dict, Optional, Callable, Any
 import importlib
 import traceback
 
-from main.Challenge import Challenge
+from Challenge import Challenge
 from .config import config
 
 # 导入现有的分析功能
