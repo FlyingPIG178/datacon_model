@@ -24,11 +24,14 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    app = create_app()
-    
+
     # 配置日志
     log_level = getattr(logging, args.log_level.upper())
+    logging.getLogger().setLevel(log_level)
     logger = logging.getLogger("server")
+
+    app = create_app()
+    
     # logging.basicConfig(
     #     level=log_level,
     #     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -40,7 +43,8 @@ if __name__ == "__main__":
     #     logger.setLevel(log_level)
     
     # 设置特定logger的级别
-    logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
+    if log_level == logging.INFO:
+        logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
     logger.info(f"启动分析服务器，监听 {args.host}:{args.port}")
     
     web.run_app(app, host=args.host, port=args.port) 

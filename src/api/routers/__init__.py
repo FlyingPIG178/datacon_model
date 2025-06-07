@@ -4,7 +4,6 @@ import logging
 from .analysis_router import AnalysisRouter
 from .projects_router import ProjectsRouter
 from .settings_router import SettingsRouter
-from .prompts_router import PromptsRouter
 from .static_router import StaticRouter
 
 logger = logging.getLogger(__name__)
@@ -13,7 +12,6 @@ logger = logging.getLogger(__name__)
 analysis_router = AnalysisRouter()
 projects_router = ProjectsRouter()
 settings_router = SettingsRouter()
-prompts_router = PromptsRouter()
 static_router = StaticRouter()
 
 def setup_all_routes(app: web.Application) -> None:
@@ -25,7 +23,6 @@ def setup_all_routes(app: web.Application) -> None:
     analysis_router.add_routes(app)
     projects_router.add_routes(app)
     settings_router.add_routes(app)
-    prompts_router.add_routes(app)
     
     # 添加静态文件路由（必须在最后添加，避免覆盖API路由）
     static_router.add_routes(app)

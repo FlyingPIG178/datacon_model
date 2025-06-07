@@ -2,7 +2,7 @@ import logging
 import os
 import asyncio
 from aiohttp import web
-import aiohttp_cors
+# import aiohttp_cors
 from typing import Callable
 
 from .config import Config, config
@@ -76,25 +76,25 @@ class ServiceManager:
         self.config._ensure_directories()
         logger.info("所有必要目录已创建")
     
-    def setup_cors(self, app: web.Application):
-        """设置CORS支持"""
-        # 添加CORS支持
-        cors = aiohttp_cors.setup(app, defaults={
-            "*": aiohttp_cors.ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers="*",
-                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-            )
-        })
+    # def setup_cors(self, app: web.Application):
+    #     """设置CORS支持"""
+    #     # 添加CORS支持
+    #     cors = aiohttp_cors.setup(app, defaults={
+    #         "*": aiohttp_cors.ResourceOptions(
+    #             allow_credentials=True,
+    #             expose_headers="*",
+    #             allow_headers="*",
+    #             allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    #         )
+    #     })
         
-        for route in list(app.router.routes()):
-            try:
-                cors.add(route)
-            except ValueError as e:
-                # 如果路由已经配置了CORS，则跳过
-                logger.debug(f"跳过已配置CORS的路由: {e}")
-                continue
+    #     for route in list(app.router.routes()):
+    #         try:
+    #             cors.add(route)
+    #         except ValueError as e:
+    #             # 如果路由已经配置了CORS，则跳过
+    #             logger.debug(f"跳过已配置CORS的路由: {e}")
+    #             continue
     
     def init_app(self):
         """初始化应用"""
@@ -110,7 +110,7 @@ class ServiceManager:
         setup_all_routes(self.app)
         
         # 设置CORS
-        self.setup_cors(self.app)
+        # self.setup_cors(self.app)
         
         # 注册启动和关闭钩子
         self.app.on_startup.append(self._on_startup)

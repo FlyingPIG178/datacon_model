@@ -10,7 +10,7 @@ class Config:
     
     def __init__(self):
         # 获取基础目录
-        self.root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         
         # 添加 main 目录到 Python 路径
         self.main_dir = os.path.join(self.root_dir, "main")
@@ -20,7 +20,6 @@ class Config:
         # 定义各种目录路径
         self.challenges_dir = os.path.join(self.root_dir, "challenges")
         self.results_dir = os.path.join(self.root_dir, "results")
-        self.prompt_dir = os.path.join(self.root_dir, "prompt")
         self.settings_dir = os.path.join(self.root_dir, "settings")
         
         # 确保目录存在
@@ -31,7 +30,6 @@ class Config:
         directories = [
             self.challenges_dir,
             self.results_dir,
-            self.prompt_dir,
             self.settings_dir
         ]
         
@@ -51,10 +49,6 @@ class Config:
     def get_settings_path(self):
         """获取设置文件路径"""
         return os.path.join(self.settings_dir, "settings.json")
-        
-    def get_prompt_path(self, prompt_name, file_type="txt"):
-        """获取指定提示词的路径"""
-        return os.path.join(self.prompt_dir, f"{prompt_name}.{file_type}")
         
 # 创建全局配置实例
 config = Config() 

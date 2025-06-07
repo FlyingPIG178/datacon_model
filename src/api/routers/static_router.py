@@ -14,7 +14,7 @@ class StaticRouter(RouterBase):
     def add_routes(self, app: web.Application) -> None:
         """添加静态文件相关路由"""
         # 获取项目根目录
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        base_dir = config.root_dir
         dist_dir = os.path.join(base_dir, 'front')
         
         # 检查dist目录是否存在
@@ -29,7 +29,7 @@ class StaticRouter(RouterBase):
         if os.path.exists(assets_dir):
             assets_static = StaticResource('/assets', assets_dir)
             app.router.register_resource(assets_static)
-            self.logger.info(f"已添加assets静态资源路由")
+            self.logger.debug(f"已添加assets静态资源路由")
         
         # 添加favicon.ico路由
         favicon_path = os.path.join(dist_dir, 'favicon.ico')
@@ -37,7 +37,7 @@ class StaticRouter(RouterBase):
             async def favicon_handler(request):
                 return web.FileResponse(favicon_path)
             app.router.add_get('/favicon.ico', favicon_handler)
-            self.logger.info("已添加favicon.ico路由")
+            self.logger.debug("已添加favicon.ico路由")
         
         # 添加index.html路由
         index_path = os.path.join(dist_dir, 'index.html')
@@ -47,6 +47,6 @@ class StaticRouter(RouterBase):
             app.router.add_get('/', index_handler)
             # 添加通配符路由，处理所有未匹配的路由，返回index.html
             app.router.add_get('/{tail:.*}', index_handler)
-            self.logger.info("已添加index.html路由")
+            self.logger.debug("已添加index.html路由")
         
         self.logger.info("静态文件路由添加完成")

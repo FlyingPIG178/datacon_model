@@ -62,12 +62,13 @@ class LogHandler(logging.Handler):
 class TerminalService:
     def __init__(self):
         self.log_handler = LogHandler()
-        # 设置日志级别
-        logging.getLogger().setLevel(logging.INFO)
+        # # 设置日志级别
+        # logging.getLogger().setLevel(logging.INFO)
         # 添加到全局日志处理
         logging.getLogger().addHandler(self.log_handler)
         # 确保日志处理器已正确初始化
-        logging.info("终端日志服务已初始化")
+        logger = logging.getLogger(__name__)
+        logger.info("终端日志服务已初始化")
     
     def add_listener(self, listener):
         """添加监听器"""
