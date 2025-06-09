@@ -1,0 +1,7 @@
+使用aiohttp库实现后端API接口
+
+使用模块化管理的routers
+
+所有的router类都继承自RouterBase类
+
+使用service_manager管理应用，并处理所有的回调函数
