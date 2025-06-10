@@ -6,24 +6,33 @@ LLM（大语言模型）集成模块是 YL-analysis 系统的核心技术组件�
 
 ## 核心组件
 
-### 1. LLMService 类
+### 1. LLM 类
 
-`LLMService` 类是 LLM 集成模块的主要实现，负责管理与大语言模型的连接和交互。
+`LLM` 类是统一的大语言模型通信接口，提供了与不同LLM服务交互的标准方法。
 
 **主要功能**：
-- 初始化和管理 LLM 客户端
-- 发送提示词到 LLM 服务
-- 接收和解析 LLM 响应
-- 处理 LLM 调用错误和重试
-- 管理 API 密钥和配置
+- 提供统一的LLM调用接口
+- 支持多种LLM服务提供商
+- 处理LLM调用错误和重试
+- 管理API密钥和配置
 
 **主要方法**：
-- `initialize()`: 初始化 LLM 服务
-- `get_completion(prompt, model, temperature)`: 获取 LLM 完成结果
-- `get_chat_completion(messages, model, temperature)`: 获取 LLM 聊天完成结果
-- `validate_api_key()`: 验证 API 密钥有效性
+- `chat(messages, model, temperature)`: 发送消息到LLM服务并获取响应
+- `validate_api_key()`: 验证API密钥有效性
 
-### 2. PromptTemplate 类
+### 2. LLM_WITHOUT_MEMORY 类
+
+`LLM_WITHOUT_MEMORY` 类继承自 `LLM` 类，专门用于无状态的LLM调用，每次调用都是独立的，不保留上下文。
+
+**主要功能**：
+- 提供无状态的LLM调用
+- 整合系统和用户消息
+- 处理异常情况
+
+**主要方法**：
+- `chat(system_message, user_message, model, temperature)`: 发送系统消息和用户消息到LLM服务并获取响应
+
+### 3. PromptTemplate 类
 
 `PromptTemplate` 类负责管理和渲染提示词模板，为不同的分析任务生成适合的提示词。
 
@@ -37,90 +46,166 @@ LLM（大语言模型）集成模块是 YL-analysis 系统的核心技术组件�
 - `render(variables)`: 使用变量渲染提示词模板
 - `get_template_variables()`: 获取模板中的变量列表
 
-### 3. FunctionParsePrompt 类
+### 4. FunctionParser 类
 
-`FunctionParsePrompt` 类是专门用于函数解析的提示词生成器，负责生成用于分析函数语义的提示词。
-
-**主要功能**：
-- 生成函数解析提示词
-- 解析函数语义分析结果
-
-**主要方法**：
-- `generate_prompt(function_code, language)`: 生成函数解析提示词
-- `parse_response(response)`: 解析 LLM 返回的函数语义分析结果
-
-### 4. VulChainGenerator 类
-
-`VulChainGenerator` 类负责生成漏洞链分析的提示词，用于检测代码中的潜在漏洞链。
+`FunctionParser` 类是专门用于函数解析的LLM调用服务，负责提取函数信息。
 
 **主要功能**：
-- 生成漏洞链分析提示词
-- 解析漏洞链分析结果
+- 调用LLM解析函数信息
+- 实现重试机制
+- 解析LLM返回的函数信息
 
 **主要方法**：
-- `generate_prompt(call_graph, functions, vuln_type)`: 生成漏洞链分析提示词
-- `parse_response(response)`: 解析 LLM 返回的漏洞链分析结果
+- `parse_function(function_code, language)`: 解析函数代码，提取函数名、调用点和参数列表
+- `retry_parse_function(function_code, language, max_retries)`: 带重试机制的函数解析
 
-### 5. CodeChainTraverser 类
+### 5. VulChainGenerator 类
 
-`CodeChainTraverser` 类负责遍历代码链，生成用于详细分析漏洞链的提示词。
+`VulChainGenerator` 类负责生成漏洞链，基于source-sink模型分析代码中的潜在漏洞路径。
 
 **主要功能**：
-- 遍历漏洞链中的函数调用
-- 生成代码链分析提示词
-- 解析代码链分析结果
+- 构建函数调用图
+- 识别source和sink函数
+- 生成漏洞调用链
 
 **主要方法**：
-- `traverse_chain(vuln_chain, functions)`: 遍历漏洞链
-- `generate_prompt(code_chain, vuln_type)`: 生成代码链分析提示词
-- `parse_response(response)`: 解析 LLM 返回的代码链分析结果
+- `generate_chains(call_graph, functions, vuln_type)`: 生成漏洞链
+- `find_paths(call_graph, sources, sinks)`: 查找从source到sink的所有简单路径
 
-## 提示词模板
+### 6. ParamsAndBodyTravel 类
 
-系统使用多种提示词模板来指导 LLM 进行不同类型的代码分析任务：
+`ParamsAndBodyTravel` 类负责污点分析与传播，跟踪参数在函数调用链中的流动。
 
-### 1. 函数解析模板
+**主要功能**：
+- 函数语义分析
+- 污点参数追踪
+- 污点行为提取
 
-用于分析单个函数的语义，包括：
-- 函数的输入和输出
-- 函数的主要功能
-- 函数中的潜在漏洞
-- 函数的调用关系
+**主要方法**：
+- `analyze_function_semantics(function, vuln_type)`: 分析函数语义，标记source和sink
+- `backward_travel(sink_functions)`: 从sink函数开始反向追踪污点参数
+- `forward_travel(source_functions)`: 从source函数开始构建调用树
 
-### 2. 漏洞链分析模板
+### 7. CodeChainTravel 类
 
-用于分析函数调用图中的潜在漏洞链，包括：
-- 漏洞入口点识别
-- 漏洞传播路径分析
-- 漏洞触发条件分析
+`CodeChainTravel` 类负责最终的漏洞链评估和报告生成。
 
-### 3. 代码链分析模板
+**主要功能**：
+- 格式化调用树数据
+- 调用LLM进行漏洞链分析
+- 生成结构化漏洞报告
 
-用于详细分析漏洞链中的代码执行路径，包括：
-- 变量传播分析
-- 条件检查分析
-- 漏洞触发点分析
-- 漏洞利用难度评估
+**主要方法**：
+- `travel(call_tree, vuln_type)`: 分析调用树，生成漏洞报告
+- `format_call_tree(call_tree)`: 格式化调用树数据为LLM可处理的格式
 
-## 支持的 LLM 模型
+## 提示工程
 
-YL-analysis 系统支持多种大语言模型，包括：
+系统使用精心设计的提示词模板来指导LLM进行不同类型的代码分析任务。提示工程是系统的"智慧核心"，决定了LLM分析的质量和准确性。
 
-- **OpenAI GPT 系列**：
-  - GPT-3.5-Turbo
-  - GPT-4
-  - GPT-4-Turbo
+### 1. function_parse_prompt
 
-- **Anthropic Claude 系列**：
-  - Claude 2
-  - Claude 3 Opus
-  - Claude 3 Sonnet
-  - Claude 3 Haiku
+用于提取函数信息的提示词，包括函数名、调用点和参数列表。
 
-- **本地模型**（通过 API 接口）：
-  - Llama 2
-  - Mistral
-  - Mixtral
+**设计特点**：
+- 角色设定明确：将LLM定位为代码分析专家
+- 输入明确：提供函数代码和语言类型
+- 任务清晰：明确要求提取函数名、调用点和参数列表
+- 推理引导：引导LLM逐步分析函数结构
+- 严格JSON输出格式：规定输出格式，便于解析
+
+**输入示例**：
+```python
+def execute_command(command, args=None, shell=False):
+    if args:
+        command = [command] + args
+    return subprocess.run(command, shell=shell, capture_output=True, text=True)
+```
+
+**输出示例**：
+```json
+{
+  "function_name": "execute_command",
+  "parameters": ["command", "args", "shell"],
+  "calls": ["subprocess.run"]
+}
+```
+
+### 2. [vuln_type]_prompt
+
+用于污点分析的提示词，根据不同漏洞类型（如命令注入、SQL注入等）标记函数的source和sink属性。
+
+**设计特点**：
+- 漏洞类型定制：针对特定漏洞类型设计提示词
+- 语义理解引导：引导LLM理解函数的语义和行为
+- 明确的标记规则：清晰定义source和sink的判断标准
+- 结构化输出：规定JSON输出格式
+
+**输入示例**（命令注入漏洞）：
+```python
+def execute_command(command, args=None, shell=False):
+    if args:
+        command = [command] + args
+    return subprocess.run(command, shell=shell, capture_output=True, text=True)
+```
+
+**输出示例**：
+```json
+{
+  "function_name": "execute_command",
+  "is_sink": true,
+  "sink_parameters": ["command", "args"],
+  "is_source": false,
+  "source_parameters": [],
+  "reasoning": "该函数使用subprocess.run执行命令，如果command或args参数来自不可信来源，可能导致命令注入漏洞。"
+}
+```
+
+### 3. code_chain_travel_prompt
+
+用于最终漏洞链评估和报告生成的提示词，分析完整的调用链并生成详细的漏洞报告。
+
+**设计特点**：
+- 全局视角：提供完整的调用链信息
+- 深入分析：要求LLM分析参数传递和条件检查
+- 漏洞评估：评估漏洞的严重性和利用难度
+- 修复建议：提供具体的修复方案
+- 结构化报告：生成结构化的漏洞报告
+
+**输入示例**：
+```json
+{
+  "call_chain": [
+    {
+      "function_name": "process_user_input",
+      "code": "def process_user_input(user_input):\n    command = 'echo ' + user_input\n    return execute_command(command, shell=True)",
+      "calls": ["execute_command"]
+    },
+    {
+      "function_name": "execute_command",
+      "code": "def execute_command(command, args=None, shell=False):\n    if args:\n        command = [command] + args\n    return subprocess.run(command, shell=shell, capture_output=True, text=True)",
+      "calls": ["subprocess.run"]
+    }
+  ],
+  "vuln_type": "command_injection"
+}
+```
+
+**输出示例**：
+```json
+{
+  "vulnerability_found": true,
+  "vulnerability_type": "command_injection",
+  "entry_point": "process_user_input",
+  "sink_point": "execute_command",
+  "parameter_flow": "user_input -> command -> subprocess.run",
+  "severity": "high",
+  "exploitation_difficulty": "easy",
+  "description": "发现命令注入漏洞。用户输入直接拼接到命令字符串中，并以shell=True方式执行，攻击者可以通过注入特殊字符执行任意命令。",
+  "poc": "';ls -la;'",
+  "remediation": "使用参数列表方式调用命令，避免shell=True，对用户输入进行严格过滤。"
+}
+```
 
 ## LLM 调用流程
 
@@ -171,6 +256,26 @@ LLM 集成模块实现了完善的错误处理和重试机制，以应对 LLM �
    - 验证 API 密钥有效性
    - 提示用户更新 API 密钥
    - 支持多个 API 密钥轮换
+
+## 支持的 LLM 模型
+
+YL-analysis 系统支持多种大语言模型，包括：
+
+- **OpenAI GPT 系列**：
+  - GPT-3.5-Turbo
+  - GPT-4
+  - GPT-4-Turbo
+
+- **Anthropic Claude 系列**：
+  - Claude 2
+  - Claude 3 Opus
+  - Claude 3 Sonnet
+  - Claude 3 Haiku
+
+- **本地模型**（通过 API 接口）：
+  - Llama 2
+  - Mistral
+  - Mixtral
 
 ## 性能优化
 

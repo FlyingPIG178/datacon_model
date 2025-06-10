@@ -19,7 +19,6 @@ class AnalysisRouter(RouterBase):
         app.router.add_post('/api/start-analysis', self.start_analysis)
         app.router.add_post('/api/stop-analysis', self.stop_analysis)
         app.router.add_get('/api/analysis-status', self.get_analysis_status)
-        # app.router.add_get('/api/results/{project_name}', self.get_analysis_results)
         app.router.add_get('/api/call-graph/{project_name}', self.get_call_graph)
         app.router.add_get('/api/get-vul-types', self.list_vul_types)
     
@@ -83,27 +82,6 @@ class AnalysisRouter(RouterBase):
             })
         except Exception as e:
             return await self.handle_error("获取分析状态", e)
-    
-    # async def get_analysis_results(self, request: web.Request) -> web.Response:
-    #     """获取特定项目的分析结果"""
-    #     try:
-    #         project_name = request.match_info.get('project_name')
-            
-    #         # 验证项目名称是否合法
-    #         if not self._validate_project_name(project_name):
-    #             return self.error_response('项目名称包含非法字符', status=400)
-            
-    #         results_file = config.get_result_path(project_name)
-            
-    #         if not os.path.exists(results_file):
-    #             return self.error_response(f'未找到项目 {project_name} 的分析结果', status=404)
-            
-    #         with open(results_file, 'r', encoding='utf-8') as f:
-    #             results = json.load(f)
-            
-    #         return self.success_response(data={'results': results})
-    #     except Exception as e:
-    #         return await self.handle_error("获取分析结果", e)
     
     async def get_call_graph(self, request: web.Request) -> web.Response:
         """获取项目调用图"""

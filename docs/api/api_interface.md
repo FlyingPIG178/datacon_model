@@ -13,7 +13,6 @@ YL-analysis 系统的 API 设计遵循以下原则：
 3. **统一响应格式**：所有 API 响应使用统一的格式，包含状态码、消息和数据。
 4. **版本控制**：API 路径包含版本信息，便于后续升级和兼容性维护。
 5. **错误处理**：API 提供清晰的错误信息和状态码，便于前端处理异常情况。
-6. **实时通信**：使用 WebSocket 实现实时日志和状态更新。
 
 ## API 基础路径
 
@@ -37,7 +36,7 @@ YL-analysis 系统的 API 设计遵循以下原则：
 
 #### 1.1 获取项目列表
 
-- **URL**: `/api/challenges`
+- **URL**: `/api/list-challenges`
 - **方法**: `GET`
 - **描述**: 获取所有可用的项目列表
 - **参数**: 无
@@ -50,13 +49,11 @@ YL-analysis 系统的 API 设计遵循以下原则：
   "data": [
     {
       "name": "project1",
-      "path": "/challenges/project1",
       "size": 1024,
       "created_at": "2023-01-01T12:00:00Z"
     },
     {
       "name": "project2",
-      "path": "/challenges/project2",
       "size": 2048,
       "created_at": "2023-01-02T12:00:00Z"
     }
@@ -64,68 +61,27 @@ YL-analysis 系统的 API 设计遵循以下原则：
 }
 ```
 
-#### 1.2 获取项目详情
+#### 1.2 上传项目
 
-- **URL**: `/api/challenges/{project_name}`
-- **方法**: `GET`
-- **描述**: 获取指定项目的详细信息
-- **参数**:
-  - `project_name`: 项目名称（路径参数）
-- **响应示例**:
-
-```json
-{
-  "status": "success",
-  "message": "获取项目详情成功",
-  "data": {
-    "name": "project1",
-    "path": "/challenges/project1",
-    "size": 1024,
-    "created_at": "2023-01-01T12:00:00Z",
-    "files": [
-      {
-        "name": "main.py",
-        "path": "/challenges/project1/main.py",
-        "size": 512,
-        "content": "def main():\n    print('Hello, world!')\n\nif __name__ == '__main__':\n    main()"
-      },
-      {
-        "name": "utils.py",
-        "path": "/challenges/project1/utils.py",
-        "size": 256,
-        "content": "def helper():\n    return 'Helper function'"
-      }
-    ]
-  }
-}
-```
-
-#### 1.3 上传项目
-
-- **URL**: `/api/upload-challenge`
+- **URL**: `upload-folder`
 - **方法**: `POST`
-- **描述**: 上传新项目（ZIP 文件）
+- **描述**: 上传新项目
 - **参数**:
-  - `file`: 项目 ZIP 文件（表单数据）
-  - `name`: 项目名称（表单数据，可选）
+  - `folder_name`: 项目名称
+  - `files[]`: 项目文件（多个）
 - **响应示例**:
 
 ```json
 {
   "status": "success",
-  "message": "项目上传成功",
-  "data": {
-    "name": "project3",
-    "path": "/challenges/project3",
-    "size": 3072,
-    "created_at": "2023-01-03T12:00:00Z"
-  }
+  "message": "项目 {project_name} 上传成功，共 {file_count} 个文件",
+  "data": {}
 }
 ```
 
-#### 1.4 删除项目
+#### 1.3 删除项目
 
-- **URL**: `/api/challenges/{project_name}`
+- **URL**: `/api/delete-project/{project_name}`
 - **方法**: `DELETE`
 - **描述**: 删除指定项目
 - **参数**:
@@ -144,7 +100,7 @@ YL-analysis 系统的 API 设计遵循以下原则：
 
 #### 2.1 启动分析任务
 
-- **URL**: `/api/analysis/start`
+- **URL**: `/api/start-analysis`
 - **方法**: `POST`
 - **描述**: 启动代码分析任务
 - **参数**:
@@ -169,7 +125,7 @@ YL-analysis 系统的 API 设计遵循以下原则：
 
 #### 2.2 获取分析任务状态
 
-- **URL**: `/api/analysis/status`
+- **URL**: `/api/analysis-status`
 - **方法**: `GET`
 - **描述**: 获取分析任务的状态
 - **参数**:
@@ -181,31 +137,22 @@ YL-analysis 系统的 API 设计遵循以下原则：
   "status": "success",
   "message": "获取任务状态成功",
   "data": {
-    "current_task": {
-      "task_id": "task-123456",
+    "task": {
+      "id": "task-123456",
       "project_name": "project1",
-      "vuln_type": "sql_injection",
-      "status": "running",
-      "progress": 45,
-      "created_at": "2023-01-03T12:00:00Z",
-      "started_at": "2023-01-03T12:01:00Z"
-    },
-    "queue": [
-      {
-        "task_id": "task-123457",
-        "project_name": "project2",
-        "vuln_type": "xss",
-        "status": "queued",
-        "created_at": "2023-01-03T12:02:00Z"
-      }
-    ]
+      "vul_type": "sql_injection",
+      "status": "processing",
+      "start_time": "",
+      "end_time": "",
+      "progress": ""
+    }
   }
 }
 ```
 
 #### 2.3 停止分析任务
 
-- **URL**: `/api/analysis/stop`
+- **URL**: `/api/stop-analysis`
 - **方法**: `POST`
 - **描述**: 停止当前正在执行的分析任务
 - **参数**: 无
@@ -215,42 +162,17 @@ YL-analysis 系统的 API 设计遵循以下原则：
 {
   "status": "success",
   "message": "分析任务已停止",
-  "data": {
-    "task_id": "task-123456",
-    "project_name": "project1",
-    "vuln_type": "sql_injection",
-    "status": "stopped",
-    "progress": 45,
-    "created_at": "2023-01-03T12:00:00Z",
-    "started_at": "2023-01-03T12:01:00Z",
-    "stopped_at": "2023-01-03T12:05:00Z"
-  }
-}
-```
-
-#### 2.4 清空分析队列
-
-- **URL**: `/api/analysis/clear-queue`
-- **方法**: `POST`
-- **描述**: 清空分析任务队列
-- **参数**: 无
-- **响应示例**:
-
-```json
-{
-  "status": "success",
-  "message": "分析队列已清空",
   "data": null
 }
 ```
 
-#### 2.5 获取分析结果
+#### 2.4 获取分析结果
 
-- **URL**: `/api/analysis/results/{task_id}`
+- **URL**: `/api/call-graph/{project_name}`
 - **方法**: `GET`
 - **描述**: 获取指定任务的分析结果
 - **参数**:
-  - `task_id`: 任务 ID（路径参数）
+  - `project_name`: 项目名称
 - **响应示例**:
 
 ```json
@@ -258,46 +180,39 @@ YL-analysis 系统的 API 设计遵循以下原则：
   "status": "success",
   "message": "获取分析结果成功",
   "data": {
-    "task_id": "task-123456",
-    "project_name": "project1",
-    "vuln_type": "sql_injection",
-    "status": "completed",
-    "created_at": "2023-01-03T12:00:00Z",
-    "completed_at": "2023-01-03T12:10:00Z",
-    "vuln_chains": [
+    [
       {
-        "id": "chain-1",
-        "entry_point": "login",
-        "sink": "execute_query",
-        "risk_level": "high",
-        "description": "SQL 注入漏洞链",
-        "path": ["login", "authenticate", "get_user", "execute_query"],
-        "code_snippets": [
+        "function": "entry",
+        "taint_params": [],
+        "taint_actions": [],
+        "calls": [
           {
-            "function": "login",
-            "file": "auth.py",
-            "line": 10,
-            "code": "def login(username, password):\n    return authenticate(username, password)"
-          },
-          {
-            "function": "authenticate",
-            "file": "auth.py",
-            "line": 15,
-            "code": "def authenticate(username, password):\n    user = get_user(username)\n    if user and user['password'] == password:\n        return user\n    return None"
-          },
-          {
-            "function": "get_user",
-            "file": "auth.py",
-            "line": 25,
-            "code": "def get_user(username):\n    query = f\"SELECT * FROM users WHERE username = '{username}'\"\n    return execute_query(query)"
-          },
-          {
-            "function": "execute_query",
-            "file": "db.py",
-            "line": 5,
-            "code": "def execute_query(query):\n    # Execute SQL query\n    return db.execute(query)"
+            "function": "process",
+            "taint_params": [],
+            "taint_actions": [],
+            "calls": [
+              {
+                "function": "execute",
+                "taint_params": [
+                  "cmd"
+                ],
+                "taint_actions": [
+                  "b'def execute(cmd):\\n    eval(cmd)'"
+                ],
+                "calls": []
+              }
+            ]
           }
-        ]
+        ],
+        "漏洞分析": {
+          "存在漏洞": true,
+          "漏洞函数": "execute",
+          "漏洞类型": "Command_injection_CWE_78",
+          "利用方式": "cmd; ls",
+          "威胁评分": 9,
+          "修复建议": "避免使用 eval 或者其他可能执行任意代码的函数，使用参数化查询或者白名单验证输入。",
+          "分析理由": "在调用链中，函数 'execute' 接收了一个名为 'cmd' 的参数，并且这个参数被用于执行 eval 函数。由于 eval 函数可以执行任意代码，如果 'cmd' 参数被攻击者控制，那么攻击者可以注入任意命令执行，从而实现命令注入攻击。因此，存在一个明显的命令注入漏洞。"
+        }
       }
     ]
   }
@@ -319,20 +234,12 @@ YL-analysis 系统的 API 设计遵循以下原则：
   "status": "success",
   "message": "获取设置成功",
   "data": {
-    "llm": {
-      "provider": "openai",
-      "model": "gpt-4",
-      "temperature": 0.2
-    },
-    "analysis": {
-      "max_file_size": 1048576,
-      "max_files": 100,
-      "timeout": 300
-    },
-    "system": {
-      "log_level": "info",
-      "max_queue_size": 10
-    }
+    "test_mode": false,
+    "retry_times": 10,
+    "openai_api_key": "",
+    "openai_api_base": "",
+    "model_name": "moonshot-v1-8k",
+    "timeout": 300
   }
 }
 ```
@@ -340,7 +247,7 @@ YL-analysis 系统的 API 设计遵循以下原则：
 #### 3.2 更新系统设置
 
 - **URL**: `/api/settings`
-- **方法**: `PUT`
+- **方法**: `POST`
 - **描述**: 更新系统设置
 - **参数**:
   - 设置对象（JSON 格式）
@@ -348,14 +255,12 @@ YL-analysis 系统的 API 设计遵循以下原则：
 
 ```json
 {
-  "llm": {
-    "provider": "openai",
-    "model": "gpt-4-turbo",
-    "temperature": 0.3
-  },
-  "analysis": {
-    "timeout": 600
-  }
+  "test_mode": false,
+  "retry_times": 10,
+  "openai_api_key": "",
+  "openai_api_base": "",
+  "model_name": "moonshot-v1-8k",
+  "timeout": 300
 }
 ```
 
@@ -365,109 +270,7 @@ YL-analysis 系统的 API 设计遵循以下原则：
 {
   "status": "success",
   "message": "设置更新成功",
-  "data": {
-    "llm": {
-      "provider": "openai",
-      "model": "gpt-4-turbo",
-      "temperature": 0.3
-    },
-    "analysis": {
-      "max_file_size": 1048576,
-      "max_files": 100,
-      "timeout": 600
-    },
-    "system": {
-      "log_level": "info",
-      "max_queue_size": 10
-    }
-  }
-}
-```
-
-#### 3.3 重置系统设置
-
-- **URL**: `/api/settings/reset`
-- **方法**: `POST`
-- **描述**: 重置系统设置为默认值
-- **参数**: 无
-- **响应示例**:
-
-```json
-{
-  "status": "success",
-  "message": "设置已重置为默认值",
-  "data": {
-    "llm": {
-      "provider": "openai",
-      "model": "gpt-3.5-turbo",
-      "temperature": 0.2
-    },
-    "analysis": {
-      "max_file_size": 1048576,
-      "max_files": 100,
-      "timeout": 300
-    },
-    "system": {
-      "log_level": "info",
-      "max_queue_size": 10
-    }
-  }
-}
-```
-
-## WebSocket 接口
-
-### 1. 终端日志 WebSocket
-
-- **URL**: `/ws/terminal`
-- **描述**: 接收实时终端日志消息
-- **消息格式**:
-
-```json
-{
-  "type": "log",
-  "level": "info",  // 日志级别：debug, info, warning, error, critical
-  "message": "正在分析函数：login",
-  "timestamp": "2023-01-03T12:05:30Z"
-}
-```
-
-### 2. 分析状态 WebSocket
-
-- **URL**: `/ws/analysis`
-- **描述**: 接收实时分析状态更新
-- **消息格式**:
-
-```json
-{
-  "type": "status_update",
-  "task_id": "task-123456",
-  "status": "running",  // 任务状态：queued, running, completed, failed, stopped
-  "progress": 60,  // 进度百分比
-  "message": "正在分析函数调用图",
-  "timestamp": "2023-01-03T12:06:00Z"
-}
-```
-
-```json
-{
-  "type": "queue_update",
-  "queue_size": 2,
-  "tasks": [
-    {
-      "task_id": "task-123457",
-      "project_name": "project2",
-      "vuln_type": "xss",
-      "status": "queued"
-    },
-    {
-      "task_id": "task-123458",
-      "project_name": "project3",
-      "vuln_type": "command_injection",
-      "status": "queued"
-    }
-  ],
-  "timestamp": "2023-01-03T12:06:30Z"
+  "data": null
 }
 ```
 
@@ -503,88 +306,12 @@ YL-analysis 系统的 API 设计遵循以下原则：
 
 目前，YL-analysis 系统的 API 接口不需要认证。在生产环境中，建议实现适当的认证机制，如 API 密钥、JWT 令牌或 OAuth2。
 
-## API 限流
-
-为了防止 API 滥用，系统实现了基本的限流机制：
-
-- 每个 IP 地址每分钟最多发送 60 个请求
-- 上传文件的大小限制为 10MB
-- 分析队列的最大长度为 10
-
 ## API 版本控制
 
 当前 API 版本为 v1。未来版本更新时，将在 URL 路径中包含版本信息，如 `/api/v2/challenges`。
 
-## WebSocket 连接管理
-
-### 连接建立
-
-前端通过以下方式建立 WebSocket 连接：
-
-```javascript
-const terminalSocket = new WebSocket('ws://localhost:8080/ws/terminal');
-const analysisSocket = new WebSocket('ws://localhost:8080/ws/analysis');
-
-terminalSocket.onopen = () => {
-  console.log('Terminal WebSocket 连接已建立');
-};
-
-analysisSocket.onopen = () => {
-  console.log('Analysis WebSocket 连接已建立');
-};
-```
-
-### 消息处理
-
-前端通过以下方式处理 WebSocket 消息：
-
-```javascript
-terminalSocket.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === 'log') {
-    console.log(`[${data.level}] ${data.message}`);
-    // 更新 UI 显示日志消息
-  }
-};
-
-analysisSocket.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === 'status_update') {
-    console.log(`任务 ${data.task_id} 状态更新: ${data.status}, 进度: ${data.progress}%`);
-    // 更新 UI 显示任务状态
-  } else if (data.type === 'queue_update') {
-    console.log(`队列更新: ${data.queue_size} 个任务在队列中`);
-    // 更新 UI 显示队列状态
-  }
-};
-```
-
-### 连接关闭和重连
-
-前端通过以下方式处理 WebSocket 连接关闭和重连：
-
-```javascript
-terminalSocket.onclose = (event) => {
-  console.log(`Terminal WebSocket 连接已关闭: ${event.code} ${event.reason}`);
-  // 尝试重新连接
-  setTimeout(() => {
-    console.log('尝试重新连接 Terminal WebSocket...');
-    // 重新创建 WebSocket 连接
-  }, 3000);
-};
-
-analysisSocket.onclose = (event) => {
-  console.log(`Analysis WebSocket 连接已关闭: ${event.code} ${event.reason}`);
-  // 尝试重新连接
-  setTimeout(() => {
-    console.log('尝试重新连接 Analysis WebSocket...');
-    // 重新创建 WebSocket 连接
-  }, 3000);
-};
-```
-
 ## 总结
 
-YL-analysis 系统的 API 接口设计遵循 RESTful 风格，提供了项目管理、分析管理和设置管理等功能，并通过 WebSocket 实现了实时日志和状态更新。API 接口使用统一的响应格式和错误处理机制，便于前端处理。
+YL-analysis 系统的 API 接口设计遵循 RESTful 风格，提供了项目管理、分析管理和设置管理等功能。API 接口使用统一的响应格式和错误处理机制，便于前端处理。
 
 系统的 API 设计考虑了可扩展性、安全性和性能，为前端提供了丰富的功能和良好的用户体验。通过这些接口，前端可以方便地管理项目、启动分析任务、监控分析进度和查看分析结果。

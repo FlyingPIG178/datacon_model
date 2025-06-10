@@ -75,27 +75,7 @@ class ServiceManager:
         """确保所有必要的目录都存在"""
         self.config._ensure_directories()
         logger.info("所有必要目录已创建")
-    
-    # def setup_cors(self, app: web.Application):
-    #     """设置CORS支持"""
-    #     # 添加CORS支持
-    #     cors = aiohttp_cors.setup(app, defaults={
-    #         "*": aiohttp_cors.ResourceOptions(
-    #             allow_credentials=True,
-    #             expose_headers="*",
-    #             allow_headers="*",
-    #             allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    #         )
-    #     })
         
-    #     for route in list(app.router.routes()):
-    #         try:
-    #             cors.add(route)
-    #         except ValueError as e:
-    #             # 如果路由已经配置了CORS，则跳过
-    #             logger.debug(f"跳过已配置CORS的路由: {e}")
-    #             continue
-    
     def init_app(self):
         """初始化应用"""
         if self.app is not None:

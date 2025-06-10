@@ -240,35 +240,6 @@ def __init__(self):
     service_manager.register_shutdown_callback(self.stop)
 ```
 
-### 2. 与 WebSocket 的交互
-
-`WebSocketHandler` 类可以实现监听器接口，通过 WebSocket 向客户端发送日志更新：
-
-```python
-class WebSocketHandler:
-    def __init__(self):
-        # ...
-        self.terminal_service = TerminalService()
-        
-    async def handle_websocket(self, request):
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
-        
-        # 创建日志监听器并注册
-        log_listener = WebSocketLogListener(ws)
-        self.terminal_service.add_listener(log_listener)
-        
-        try:
-            async for msg in ws:
-                # 处理客户端消息
-                # ...
-        finally:
-            # 移除日志监听器
-            self.terminal_service.remove_listener(log_listener)
-            
-        return ws
-```
-
 ### 3. 与漏洞检测器的交互
 
 漏洞检测器可以使用标准的 Python 日志记录器记录日志，这些日志会被 `LogHandler` 捕获并转发：
