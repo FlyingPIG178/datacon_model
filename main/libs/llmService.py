@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import time
+import traceback
 from typing import Tuple, Dict, List, Any
 
 from . import llmbase
@@ -434,13 +435,19 @@ class ParamsAndBodyTravel:
             if current_index + 1 < len(vuln_chain.vuln_chain_function_list):
                 next_function_name = vuln_chain.vuln_chain_function_list[current_index + 1]
                 if next_function_name in self.all_funtion_list:
-                    child_function = self.all_funtion_list[next_function_name]
+                    child_function = self.get_function_by_name(vuln_chain.vuln_chain_function, next_function_name)
                     child_node = self.build_call_tree(child_function, vuln_chain)
                     if child_node is not None:
                         node["calls"].append(child_node)
 
         self.find_and_append_clean_functions(node, function, vuln_chain)
         return node
+
+    def get_function_by_name(self, function_list, target_name):
+        for func in function_list:
+            if func.name == target_name:
+                return func
+        return None
 
     def find_and_append_clean_functions(self, node, function, vuln_chain):
         for action in node["taint_actions"]:
@@ -452,10 +459,20 @@ class ParamsAndBodyTravel:
                     not vuln_chain or called_function_name not in vuln_chain.vuln_chain_function_list):
                 clean_function = self.all_funtion_list[called_function_name]
 
-                # 直接使用函数参数列表进行污点检测
+                # 获取实参列表
+                args_str = action[action.find('(') + 1:action.find(')')]
+                call_args_list = [arg.strip() for arg in args_str.split(',')]
+
+                # 构造 clean 的形参 和 handler 的实参的映射
+                param_binding = {
+                    param_name: arg_name
+                    for param_name, arg_name in zip(clean_function.param_list, call_args_list)
+                }
+
+                # 判断 clean 函数哪些参数是污点
                 tainted_param_indices = [
-                    i for i, param in enumerate(clean_function.param_list)
-                    if param in function.tainted_params
+                    idx for idx, param in enumerate(clean_function.param_list)
+                    if param_binding.get(param) in function.tainted_params
                 ]
 
                 if not tainted_param_indices:
@@ -485,12 +502,6 @@ class ParamsAndBodyTravel:
 
     def reverse_traverse(self, child: Function, parent: Function):
         """
-        反向递归遍历，传递当前子节点的污点参数给父节点。这里还要处理，如何让ai明白形参和实参的区别并联系起来
-        只会处理一个父节点（vuln_chain是单链表结构）。
-        这里需要在处理节点代码处反向遍历vuln_chain,将相邻节点传给这个函数
-        越界判断（parent是否存在）在处理节点处处理
-        结果:为父节点添加五点参数列表
-        现在直接把child和parent传进去，具体需要什么值具体调用
         """
         if not child.tainted_params or not child.param_list:
             return
@@ -550,6 +561,7 @@ class CodeChainTravel:
                 content = self.fix_json_escape(content)
                 json_obj = json.loads(content)
             return json_obj
+
         except json.JSONDecodeError as e:
             logging.error("JSON格式解析错误:", e)
             return None
@@ -578,25 +590,29 @@ class CodeChainTravel:
             count = 0
             llm_output = self.llm.communicate(prompt, None)
             llm_output = self.resolve_output(llm_output)
+
             while count <= Config.retry_times:
                 if llm_output is None:
                     logging.info(f"大模型结果漏洞分析失败，第{count}次尝试重新请求大模型:")
-                    count=count+1
+                    count = count + 1
+
                     # time.sleep(5)  # 增加延迟时间，指数回退
+
                     llm_output = self.llm.communicate(prompt, None)
                     llm_output = self.resolve_output(llm_output)
                 else:
                     print("大模型分析成功。")
-                    node_data["vulnerability_analysis"] = llm_output.get("vulnerability_analysis", {})
+                    node_data["漏洞分析"] = llm_output
                     return node_data
+
                 if llm_output is not None:
                     print("大模型分析成功。")
-                    node_data["vulnerability_analysis"] = llm_output.get("vulnerability_analysis", {})
+                    node_data["漏洞分析"] = llm_output
                     return node_data
 
                 count += 1
                 logging.info(f"大模型结果解析失败，第 {count} 次重试...")
-                llm_output = self.llm.communicate(prompt)
+                llm_output = self.llm.communicate(prompt, None)
 
             logging.error("所有重试均失败，无法获取大模型结果。")
             return node_data

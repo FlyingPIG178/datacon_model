@@ -30,7 +30,7 @@ else:
     model_name='gpt-4'
 #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
 
-class LLM():
+class LLM:
 
     def __init__(self):
         self.llm_with_memory = LLM_MEMORY()
@@ -71,7 +71,7 @@ class LLM():
 
 
 #调用大模型进行单次对话，SystemMessage设定中的指令遵循能力较好
-class LLM_WITHOUT_MEMORY():
+class LLM_WITHOUT_MEMORY:
     def __init__(self) -> None:
         #初始化大模型
         self.llm = ChatOpenAI(
@@ -118,7 +118,7 @@ class LLM_WITHOUT_MEMORY():
             return None
 
 #调用大模型进行多轮对话，记忆会占用8k限制，且指令遵循能力弱
-class LLM_MEMORY():
+class LLM_MEMORY:
     def __init__(self) -> None:
         #初始化大模型
         self.llm = ChatOpenAI(
@@ -167,6 +167,7 @@ class LLM_MEMORY():
         # 使用列表推导式生成子串列表
         return [s[i * x:(i + 1) * x] for i in range(num_slices)]
 
+    @staticmethod
     #计算大模型输入内容的token数
     def token_num(text):
         try:
@@ -179,8 +180,6 @@ class LLM_MEMORY():
             return num_tokens
         except Exception as e:
             return None
-
-
 
 
 
