@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 import re
@@ -384,7 +385,7 @@ class ParamsAndBodyTravel:
         self.all_funtion_list = {func.name: func for func in functions}
         self.processed_functions = set()  # 全局集合，用于记录已处理的函数
 
-    def audit_vulnerability_chain(self, vuln_chain: VulnChain):
+    def audit_vulnerability_chain(self, vuln_chain: [VulnChain]):
         """
         先反转vuln_chain因为vuln_chain是单链结构所以直接顺序遍历找父节点
         reverse_traverse越界判断（parent是否存在）在处理节点处处理：抛出异常说明到结尾
@@ -449,49 +450,121 @@ class ParamsAndBodyTravel:
                 return func
         return None
 
+    def extract_all_called_function_names(self, action):
+        """
+        提取所有函数调用名，返回 b'函数名' 格式（bytes），用于匹配字典中以 bytes 存储的函数名。
+        """
+        try:
+            # 如果是 b'...' 形式的字符串，先转为普通字符串
+            if isinstance(action, str) and action.startswith("b'"):
+                action = ast.literal_eval(action).decode('utf-8')
+
+            # 正则提取所有函数名（如 get_input、sanitize 等）
+            matches = re.findall(r'\b([a-zA-Z_]\w*)\s*\(', action)
+
+            # 返回 bytes 格式的函数名列表，例如：b'get_input'
+            return [f"b'{name}'" for name in matches]  # 注意：这里是字符串形式的 b''
+
+        except Exception as e:
+            print(f" 正则提取失败: {e}")
+            return []
+
+    def extract_args_list(self,action: str, function_name: str) -> list:
+        """
+        从 action 中提取指定函数名的参数列表，返回如 ["data", "sizeof(data_buf)"]。
+        支持最外层括号匹配，内部允许简单括号嵌套。
+        """
+        try:
+            function_name = function_name.strip("b'\"")
+            if action.startswith("b'"):
+                action = ast.literal_eval(action).decode('utf-8')
+        except Exception as e:
+            print(f"[decode error] {e}")
+            return []
+
+        # 正则找出 function_name(
+        pattern = re.compile(rf'{re.escape(function_name)}\s*\(')
+        match = pattern.search(action)
+        if not match:
+            return []
+
+        start = match.end()  # 括号后的位置
+        depth = 1
+        i = start
+        while i < len(action):
+            if action[i] == '(':
+                depth += 1
+            elif action[i] == ')':
+                depth -= 1
+                if depth == 0:
+                    args_str = action[start:i].strip()
+                    return [arg.strip() for arg in self.split_args(args_str)]
+            i += 1
+        return []
+
+    def split_args(self,args_str: str) -> list:
+        """
+        安全拆分参数字符串，考虑括号内逗号不作为分隔符。
+        例如 "data, sizeof(buf), 1 + (2, 3)" → ["data", "sizeof(buf)", "1 + (2, 3)"]
+        """
+        args = []
+        current = ""
+        depth = 0
+        for ch in args_str:
+            if ch == ',' and depth == 0:
+                args.append(current.strip())
+                current = ""
+            else:
+                if ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth -= 1
+                current += ch
+        if current:
+            args.append(current.strip())
+        return args
     def find_and_append_clean_functions(self, node, function, vuln_chain):
         for action in node["taint_actions"]:
             # 去掉正则匹配，直接获取调用的函数名
-            called_function_name = action.split('(')[0].strip()
+            called_function = self.extract_all_called_function_names(action)
+            for called_function_name in called_function:
+                if called_function_name in self.all_funtion_list and (
+                        not vuln_chain or called_function_name not in vuln_chain.vuln_chain_function_list):
+                    clean_function = self.all_funtion_list[called_function_name]
 
-            # 检查函数是否存在且不在漏洞链中
-            if called_function_name in self.all_funtion_list and (
-                    not vuln_chain or called_function_name not in vuln_chain.vuln_chain_function_list):
-                clean_function = self.all_funtion_list[called_function_name]
+                    # 获取实参列表
+                    args_str = self.extract_args_list(action, called_function_name)
+                    call_args_list = args_str
 
-                # 获取实参列表
-                args_str = action[action.find('(') + 1:action.find(')')]
-                call_args_list = [arg.strip() for arg in args_str.split(',')]
+                    # 构造 clean 的形参 和 handler 的实参的映射
+                    param_binding = {
+                        param_name: arg_name
+                        for param_name, arg_name in zip(clean_function.param_list, call_args_list)
+                    }
 
-                # 构造 clean 的形参 和 handler 的实参的映射
-                param_binding = {
-                    param_name: arg_name
-                    for param_name, arg_name in zip(clean_function.param_list, call_args_list)
-                }
+                    # 判断 clean 函数哪些参数是污点
+                    tainted_param_indices = [
+                        idx for idx, param in enumerate(clean_function.param_list)
+                        if param_binding.get(param) in function.tainted_params
+                    ]
 
-                # 判断 clean 函数哪些参数是污点
-                tainted_param_indices = [
-                    idx for idx, param in enumerate(clean_function.param_list)
-                    if param_binding.get(param) in function.tainted_params
-                ]
+                    if not tainted_param_indices:
+                        continue  # 没有污点参数则跳过
 
-                if not tainted_param_indices:
-                    continue  # 没有污点参数则跳过
+                    print(
+                        f"✅ Detected function call with tainted parameters: {called_function_name}, Positions: {tainted_param_indices}")
 
-                print(
-                    f"✅ Detected function call with tainted parameters: {called_function_name}, Positions: {tainted_param_indices}")
+                    # 标记对应位置的参数为污点参数
+                    for i in tainted_param_indices:
+                        if i < len(clean_function.param_list):
+                            param_name = clean_function.param_list[i]
+                            print(f"⚠️ Marking {param_name} as tainted in function {called_function_name}.")
+                            clean_function.add_tainted_param(param_name)
 
-                # 标记对应位置的参数为污点参数
-                for i in tainted_param_indices:
-                    if i < len(clean_function.param_list):
-                        param_name = clean_function.param_list[i]
-                        print(f"⚠️ Marking {param_name} as tainted in function {called_function_name}.")
-                        clean_function.add_tainted_param(param_name)
-
-                # 构建调用树
-                clean_node = self.build_call_tree(clean_function, vuln_chain)
-                if clean_node is not None:
-                    node['calls'].insert(0, clean_node)
+                    # 构建调用树
+                    clean_node = self.build_call_tree(clean_function, vuln_chain)
+                    if clean_node is not None:
+                        node['calls'].insert(0, clean_node)
 
     def analyze(self, entry_point, vuln_chain):
         try:
