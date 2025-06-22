@@ -9,7 +9,7 @@ YL-analysis 系统采用前后端分离架构，后端使用 Python + aiohttp �
 YL-analysis 系统的 API 设计遵循以下原则：
 
 1. **RESTful 风格**：API 遵循 RESTful 设计风格，使用标准的 HTTP 方法（GET, POST, PUT, DELETE）表示不同的操作。
-2. **JSON 数据格式**：API 请求和响应均使用 JSON 格式，便于前端处理。
+2. **JSON 数据格式**：API 请求和响应的Content-Type均为application/json，除非特别说明（如文件上传使用multipart/form-data），便于前端处理。
 3. **统一响应格式**：所有 API 响应使用统一的格式，包含状态码、消息和数据。
 4. **版本控制**：API 路径包含版本信息，便于后续升级和兼容性维护。
 5. **错误处理**：API 提供清晰的错误信息和状态码，便于前端处理异常情况。

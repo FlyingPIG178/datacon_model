@@ -80,33 +80,7 @@ YL-analysis 系统采用分层架构设计，主要包括以下几层：
 - `run_single_challenge(challenge, task)`：运行单个项目的分析流程
 - `get_challenge(project_dir, vuln_type)`：获取 Challenge 对象
 
-### 5. Challenge 类
-
-Challenge 类表示一个待分析的代码项目，包含了项目的文件、函数以及分析结果。
-
-**主要功能**：
-- 解析项目文件
-- 分析函数语义
-- 生成调用图
-- 生成漏洞链
-- 生成代码链
-
-**主要属性**：
-- `vuln_type`: 漏洞类型
-- `challenge_dir`: 项目目录路径
-- `file_list`: 项目文件列表
-- `all_funtion_list`: 所有函数列表
-- `call_graph`: 函数调用图
-- `vuln_chain_dict`: 漏洞链字典
-
-**主要方法**：
-- `parse_files()`: 解析文件中的函数
-- `analysis_functions()`: 分析函数语义
-- `generate_call_graph()`: 生成函数调用图
-- `generate_vul_chains()`: 生成漏洞链
-- `check_vul_chains()`: 检查漏洞链
-
-### 6. 终端服务 (TerminalService)
+### 5. 终端服务 (TerminalService)
 
 终端服务负责管理系统日志，并支持将日志实时推送给监听器。
 
@@ -119,7 +93,7 @@ Challenge 类表示一个待分析的代码项目，包含了项目的文件、�
 - `add_listener(listener)`：添加日志监听器
 - `remove_listener(listener)`：移除日志监听器
 
-### 7. 配置管理模块 (Config)
+### 6. 配置管理模块 (Config)
 
 配置管理模块负责加载、存储和管理系统配置，为其他模块提供统一的配置访问接口。
 
@@ -134,7 +108,7 @@ Challenge 类表示一个待分析的代码项目，包含了项目的文件、�
 - `update_setting(key, value)`: 更新设置值
 - `ensure_directories()`: 确保必要的目录存在
 
-### 8. 项目管理模块 (ProjectsRouter)
+### 7. 项目管理模块 (ProjectsRouter)
 
 项目管理模块负责管理代码项目的上传、存储、列表和删除操作。
 

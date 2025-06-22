@@ -1,12 +1,12 @@
-# 服务管理模块
+### 服务管理模块
 
-## 概述
+#### 概述
 
 YL-analysis 系统的服务管理模块是整个后端 API 的核心，负责应用的初始化、配置加载、路由设置和生命周期管理。该模块采用单例模式实现，确保整个应用中只有一个服务管理器实例。本文档详细介绍了服务管理模块的架构和工作流程。
 
-## 核心组件
+#### 核心组件
 
-### ServiceManager 类
+##### ServiceManager 类
 
 `ServiceManager` 类是服务管理模块的核心，负责管理整个应用的生命周期。
 
@@ -28,7 +28,7 @@ YL-analysis 系统的服务管理模块是整个后端 API 的核心，负责应
 - `init_app()`: 初始化 aiohttp 应用
 - `create_app()`: 创建 aiohttp 应用
 
-## 单例模式实现
+#### 单例模式实现
 
 `ServiceManager` 类使用 `__new__()` 方法实现单例模式，确保整个应用中只有一个服务管理器实例：
 
@@ -40,9 +40,9 @@ def __new__(cls, *args, **kwargs):
     return cls._instance
 ```
 
-## 初始化流程
+#### 初始化流程
 
-### 1. 服务管理器初始化
+##### 1. 服务管理器初始化
 
 ```python
 def __init__(self):
@@ -60,7 +60,7 @@ def __init__(self):
 3. 初始化启动和关闭回调函数列表
 4. 标记初始化完成
 
-### 2. 应用初始化
+##### 2. 应用初始化
 
 ```python
 def init_app(self):
@@ -79,7 +79,7 @@ def init_app(self):
 4. 注册启动和关闭钩子
 5. 返回应用对象
 
-### 3. 确保目录存在
+##### 3. 确保目录存在
 
 ```python
 def _ensure_directories(self):
@@ -91,9 +91,9 @@ def _ensure_directories(self):
 1. 项目目录（CHALLENGES_DIR）
 2. 日志目录（LOGS_DIR）
 
-## 回调函数管理
+#### 回调函数管理
 
-### 1. 注册回调函数
+##### 1. 注册回调函数
 
 ```python
 def register_startup_callback(self, callback):
@@ -105,7 +105,7 @@ def register_shutdown_callback(self, callback):
 
 服务管理器允许其他组件注册启动和关闭回调函数，这些函数将在应用启动和关闭时执行。
 
-### 2. 执行回调函数
+##### 2. 执行回调函数
 
 ```python
 async def _on_startup(self, app):
@@ -125,7 +125,7 @@ async def _on_shutdown(self, app):
 
 服务管理器会在应用启动和关闭时执行注册的回调函数。它会检查回调函数是否是协程函数，如果是，则使用 `await` 调用；否则，直接调用。
 
-## 应用创建
+#### 应用创建
 
 ```python
 def create_app(self):
@@ -136,9 +136,9 @@ def create_app(self):
 
 `create_app()` 方法是应用的工厂函数，它会检查应用对象是否已经存在，如果不存在，则初始化应用；然后返回应用对象。
 
-## 与其他模块的交互
+#### 与其他模块的交互
 
-### 1. 与路由系统的交互
+##### 1. 与路由系统的交互
 
 服务管理器通过 `setup_all_routes()` 函数设置所有路由：
 
@@ -158,7 +158,7 @@ def setup_all_routes(app):
 
 每个路由管理器都实现了 `add_routes()` 方法，用于向应用添加路由。
 
-### 2. 与配置系统的交互
+##### 2. 与配置系统的交互
 
 服务管理器在初始化时创建配置对象，并在确保目录存在时使用配置中的路径：
 
@@ -173,7 +173,7 @@ def _ensure_directories(self):
     os.makedirs(self.config.LOGS_DIR, exist_ok=True)
 ```
 
-### 3. 与分析队列管理器的交互
+##### 3. 与分析队列管理器的交互
 
 分析队列管理器可以注册启动和关闭回调函数：
 
@@ -193,7 +193,7 @@ def stop(self, app):
     # ...
 ```
 
-### 4. 与终端服务的交互
+##### 4. 与终端服务的交互
 
 终端服务也可以注册启动和关闭回调函数：
 
@@ -213,7 +213,7 @@ def stop(self, app):
     # ...
 ```
 
-## 应用启动流程
+#### 应用启动流程
 
 1. 在 `server.py` 中，调用 `api.create_app()` 创建应用：
 
@@ -257,13 +257,13 @@ web.run_app(app, host=args.host, port=args.port, access_log=None)
 
 6. 应用启动时，执行 `_on_startup()` 方法，调用所有注册的启动回调函数。
 
-## 应用关闭流程
+#### 应用关闭流程
 
 1. 当应用收到关闭信号时，执行 `_on_shutdown()` 方法。
 2. `_on_shutdown()` 方法调用所有注册的关闭回调函数。
 3. 各组件执行清理操作，释放资源。
 
-## 配置管理
+#### 配置管理
 
 服务管理器使用 `Config` 类管理配置：
 
@@ -284,6 +284,6 @@ class Config:
 
 `Config` 类定义了应用的基本路径和目录，并确保这些目录存在。
 
-## 总结
+#### 总结
 
 服务管理模块是 YL-analysis 系统的核心组件，负责应用的初始化、配置加载、路由设置和生命周期管理。通过单例模式和回调函数机制，该模块提供了一个灵活、可扩展的应用框架，使其他组件能够方便地集成到应用中。服务管理器的设计使得应用的启动和关闭过程变得有序和可控，确保各组件能够正确地初始化和清理资源。

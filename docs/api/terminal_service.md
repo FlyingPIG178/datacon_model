@@ -1,12 +1,12 @@
-# 终端服务模块
+### 终端服务模块
 
-## 概述
+#### 概述
 
-YL-analysis 系统的终端服务模块负责管理系统日志和终端输出，提供实时日志捕获和转发功能。该模块通过拦截标准输出和标准错误流，将日志信息保存到文件并通过 WebSocket 实时推送给客户端。本文档详细介绍了终端服务模块的架构和工作流程。
+YL-analysis 系统的终端服务模块负责管理系统日志和终端输出，提供实时日志捕获和转发功能。该模块通过拦截标准输出和标准错误流，并推送给客户端。本文档详细介绍了终端服务模块的架构和工作流程。
 
-## 核心组件
+#### 核心组件
 
-### 1. LogHandler 类
+##### 1. LogHandler 类
 
 `LogHandler` 类继承自 `logging.Handler`，负责处理日志记录并转发给监听器。
 
@@ -43,7 +43,7 @@ class LogHandler(logging.Handler):
             self.listeners.remove(listener)
 ```
 
-### 2. TerminalService 类
+##### 2. TerminalService 类
 
 `TerminalService` 类是终端服务模块的核心，负责管理日志处理器和输出流重定向。
 
@@ -123,7 +123,7 @@ class TerminalService:
         self.log_handler.remove_listener(listener)
 ```
 
-### 3. StdoutListener 类
+##### 3. StdoutListener 类
 
 `StdoutListener` 类负责拦截标准输出和标准错误流，将输出内容转发给日志处理器和原始输出流。
 
@@ -169,7 +169,7 @@ class StdoutListener:
             self.log_file.flush()
 ```
 
-## 监听器接口
+#### 监听器接口
 
 任何想要接收日志更新的组件都可以实现监听器接口，并通过 `add_listener()` 方法注册。
 
@@ -190,45 +190,45 @@ class WebSocketLogListener:
         await self.websocket.send_json(message)
 ```
 
-## 工作流程
+#### 工作流程
 
-### 1. 服务启动
+##### 1. 服务启动
 
 1. 在应用启动时，`TerminalService.start()` 方法被调用
 2. 配置日志处理器并添加到根日志记录器
 3. 创建日志文件
 4. 重定向标准输出和标准错误流
 
-### 2. 日志捕获
+##### 2. 日志捕获
 
 1. 当系统输出日志时，日志记录被发送到 `LogHandler`
 2. `LogHandler.emit()` 方法处理日志记录并转发给所有监听器
 
-### 3. 标准输出捕获
+##### 3. 标准输出捕获
 
 1. 当系统使用 `print()` 函数或直接写入 `sys.stdout` 时，输出被 `StdoutListener` 拦截
 2. `StdoutListener.write()` 方法将输出内容写入原始输出流、日志文件，并通知所有监听器
 
-### 4. 标准错误捕获
+##### 4. 标准错误捕获
 
 1. 当系统写入 `sys.stderr` 时，输出被 `StdoutListener` 拦截（`is_error=True`）
 2. `StdoutListener.write()` 方法将输出内容写入原始错误流、日志文件，并通知所有监听器
 
-### 5. 日志转发
+##### 5. 日志转发
 
 1. 监听器接收到日志条目和日志类型
 2. 监听器可以将日志转发给客户端或进行其他处理
 
-### 6. 服务停止
+##### 6. 服务停止
 
 1. 在应用关闭时，`TerminalService.stop()` 方法被调用
 2. 恢复标准输出和标准错误流
 3. 关闭日志文件
 4. 移除日志处理器
 
-## 与其他模块的交互
+#### 与其他模块的交互
 
-### 1. 与服务管理器的交互
+##### 1. 与服务管理器的交互
 
 `TerminalService` 在初始化时注册启动和关闭回调函数：
 
@@ -240,7 +240,7 @@ def __init__(self):
     service_manager.register_shutdown_callback(self.stop)
 ```
 
-### 3. 与漏洞检测器的交互
+##### 3. 与漏洞检测器的交互
 
 漏洞检测器可以使用标准的 Python 日志记录器记录日志，这些日志会被 `LogHandler` 捕获并转发：
 
@@ -256,7 +256,7 @@ def analyze_challenge(project_dir, vuln_type, task=None):
     return result
 ```
 
-## 日志级别
+#### 日志级别
 
 系统支持以下日志级别：
 
@@ -285,7 +285,7 @@ def main():
     # ...
 ```
 
-## 日志格式
+#### 日志格式
 
 系统使用以下日志格式：
 
@@ -299,20 +299,7 @@ def main():
 2023-06-01 12:34:56 - vuln_detector - INFO - Starting analysis of /path/to/project for vulnerability type Command_injection_CWE_78
 ```
 
-## 日志文件
 
-系统将日志保存到 `logs` 目录下的文件中，文件名格式为：
+#### 总结
 
-```
-app_YYYYMMDD_HHMMSS.log
-```
-
-例如：
-
-```
-app_20230601_123456.log
-```
-
-## 总结
-
-终端服务模块是 YL-analysis 系统的重要组件，负责管理系统日志和终端输出。通过拦截标准输出和标准错误流，该模块将日志信息保存到文件并通过 WebSocket 实时推送给客户端，提供了完整的日志捕获和转发功能。该模块的设计使得系统能够方便地记录和查看日志，有助于调试和监控系统运行状态。
+终端服务模块是 YL-analysis 系统的重要组件，负责管理系统日志和终端输出。通过拦截标准输出和标准错误流，该模块将日志信息推送给客户端，提供了完整的日志捕获和转发功能。该模块的设计使得系统能够方便地记录和查看日志，有助于调试和监控系统运行状态。

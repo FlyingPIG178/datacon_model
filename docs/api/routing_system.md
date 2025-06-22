@@ -1,12 +1,12 @@
-# 路由系统
+### 路由系统
 
-## 概述
+#### 概述
 
 YL-analysis 系统的路由系统负责管理和处理所有 API 请求，将客户端请求路由到相应的处理函数。该系统采用模块化设计，通过基类和继承机制实现路由的统一管理。本文档详细介绍了路由系统的架构和工作流程。
 
-## 核心组件
+#### 核心组件
 
-### 1. RouterBase 类
+##### 1. RouterBase 类
 
 `RouterBase` 是所有路由管理器的基类，定义了路由管理器的基本接口。
 
@@ -20,11 +20,11 @@ class RouterBase:
         raise NotImplementedError("Subclasses must implement add_routes method")
 ```
 
-### 2. 具体路由管理器
+##### 2. 具体路由管理器
 
 系统包含多个具体的路由管理器，每个管理器负责一组相关的 API 路由。
 
-#### 2.1 SettingsRouter
+###### 2.1 SettingsRouter
 
 `SettingsRouter` 负责处理与系统设置相关的 API 请求。
 
@@ -47,7 +47,7 @@ class SettingsRouter(RouterBase):
         # ...
 ```
 
-#### 2.2 AnalysisRouter
+###### 2.2 AnalysisRouter
 
 `AnalysisRouter` 负责处理与漏洞分析相关的 API 请求。
 
@@ -85,7 +85,7 @@ class AnalysisRouter(RouterBase):
         # ...
 ```
 
-#### 2.3 ProjectsRouter
+###### 2.3 ProjectsRouter
 
 `ProjectsRouter` 负责处理与项目管理相关的 API 请求。
 
@@ -114,7 +114,7 @@ class ProjectsRouter(RouterBase):
         # ...
 ```
 
-#### 2.4 StaticRouter
+###### 2.4 StaticRouter
 
 `StaticRouter` 负责处理静态文件请求，包括前端资源和文档。
 
@@ -133,7 +133,7 @@ class StaticRouter(RouterBase):
         # ...
 ```
 
-### 3. 路由设置函数
+##### 3. 路由设置函数
 
 `setup_all_routes` 函数负责初始化并添加所有路由管理器到应用程序。
 
@@ -151,36 +151,36 @@ def setup_all_routes(app):
         router.add_routes(app)
 ```
 
-## 路由处理流程
+#### 路由处理流程
 
-### 1. 请求接收
+##### 1. 请求接收
 
 1. 客户端发送 HTTP 请求到服务器
 2. aiohttp 服务器接收请求并根据 URL 路径查找对应的处理函数
 
-### 2. 路由匹配
+##### 2. 路由匹配
 
 1. aiohttp 根据请求的 URL 路径和 HTTP 方法匹配路由表中的路由
 2. 如果找到匹配的路由，调用对应的处理函数
 3. 如果没有找到匹配的路由，返回 404 错误
 
-### 3. 请求处理
+##### 3. 请求处理
 
 1. 处理函数接收 `request` 对象
 2. 处理函数解析请求参数（URL 参数、查询参数、请求体等）
 3. 处理函数执行业务逻辑
 4. 处理函数返回 HTTP 响应
 
-### 4. 响应返回
+##### 4. 响应返回
 
 1. aiohttp 将处理函数返回的响应发送给客户端
 2. 客户端接收响应并处理
 
-## API 响应格式
+#### API 响应格式
 
 系统使用统一的 JSON 响应格式：
 
-### 成功响应
+##### 成功响应
 
 ```json
 {
@@ -189,7 +189,7 @@ def setup_all_routes(app):
 }
 ```
 
-### 错误响应
+##### 错误响应
 
 ```json
 {
@@ -198,9 +198,9 @@ def setup_all_routes(app):
 }
 ```
 
-## 路由示例
+#### 路由示例
 
-### 1. 启动分析
+##### 1. 启动分析
 
 ```python
 async def start_analysis(self, request):
@@ -229,7 +229,7 @@ async def start_analysis(self, request):
         }, status=500)
 ```
 
-### 2. 获取分析状态
+##### 2. 获取分析状态
 
 ```python
 async def get_analysis_status(self, request):
@@ -246,7 +246,7 @@ async def get_analysis_status(self, request):
         }, status=500)
 ```
 
-### 3. 获取项目列表
+##### 3. 获取项目列表
 
 ```python
 async def list_challenges(self, request):
@@ -270,7 +270,7 @@ async def list_challenges(self, request):
         }, status=500)
 ```
 
-## 错误处理
+#### 错误处理
 
 系统使用 try-except 结构处理请求处理过程中可能出现的异常：
 
@@ -290,7 +290,7 @@ async def some_handler(self, request):
         }, status=500)
 ```
 
-## 中间件
+#### 中间件
 
 系统可以使用 aiohttp 中间件处理所有请求和响应：
 
@@ -311,6 +311,6 @@ async def error_middleware(request, handler):
         }, status=500)
 ```
 
-## 总结
+#### 总结
 
-路由系统是 YL-analysis 系统的重要组件，负责管理和处理所有 API 请求。通过模块化设计和基类继承机制，系统实现了路由的统一管理和灵活扩展。每个路由管理器负责一组相关的 API 路由，使得系统的 API 结构清晰、易于维护。系统还支持通过 WebSocket 向客户端推送实时更新，提供了更好的用户体验。
+路由系统是 YL-analysis 系统的重要组件，负责管理和处理所有 API 请求。通过模块化设计和基类继承机制，系统实现了路由的统一管理和灵活扩展。每个路由管理器负责一组相关的 API 路由，使得系统的 API 结构清晰、易于维护。

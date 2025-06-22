@@ -216,25 +216,6 @@ async def start_analysis(self, request):
     return web.json_response({"task_id": task_id})
 ```
 
-### 2. 与 WebSocket 的交互
-
-`WebSocketHandler` 类实现了监听器接口，通过 WebSocket 向客户端发送状态更新：
-
-```python
-def on_status_updated(self, task):
-    message = {
-        "type": "status_updated",
-        "task": task.to_dict()
-    }
-    asyncio.create_task(self.send_message(message))
-
-def on_queue_updated(self):
-    message = {
-        "type": "queue_updated",
-        "status": self.queue_manager.get_status()
-    }
-    asyncio.create_task(self.send_message(message))
-```
 
 ### 3. 与漏洞检测器的交互
 
