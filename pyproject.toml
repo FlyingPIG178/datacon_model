@@ -1,0 +1,19 @@
+[project]
+name = "yl-front"
+version = "0.3.1"
+description = "一个基于LLM（大语言模型）的智能代码分析工具，用于自动化检测代码中的潜在漏洞和安全问题。"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp>=3.12.0",
+    "langchain>=0.3.25",
+    "langchain-openai>=0.3.17",
+    "networkx>=3.4.2",
+    "tree-sitter>=0.24.0",
+    "tree-sitter-c==0.23.4",
+    "tree-sitter-go>=0.23.4",
+    "tree-sitter-java>=0.23.5",
+    "tree-sitter-php>=0.23.11",
+    "tree-sitter-python>=0.23.6",
+    "tree-sitter-typescript>=0.23.2",
+]
